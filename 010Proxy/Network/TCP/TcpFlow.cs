@@ -40,9 +40,11 @@ namespace _010Proxy.Network.TCP
         public PosixTimeval FirstPacketTime { get; private set; }
         public PosixTimeval LastPacketTime { get; private set; }
 
-        public List<PacketInfo> PacketsInfo { get; private set; }
+        public List<PacketInfo> PacketsInfo { get; }
 
-        public List<byte> FlowData { get; private set; }
+        public List<byte> FlowData { get; }
+
+        public Dictionary<object, object> Data { get; set; }
 
         public TcpFlow()
         {

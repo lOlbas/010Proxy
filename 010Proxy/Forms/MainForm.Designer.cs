@@ -41,17 +41,25 @@
             this.contextMenuStrip = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.configView = new System.Windows.Forms.TreeView();
             this.configImageList = new System.Windows.Forms.ImageList(this.components);
-            this.splitter1 = new System.Windows.Forms.Splitter();
+            this.splitter = new System.Windows.Forms.Splitter();
+            this.configGroupBox = new System.Windows.Forms.GroupBox();
+            this.leftPanel = new System.Windows.Forms.Panel();
+            this.leftPanelSplitter = new System.Windows.Forms.Splitter();
+            this.flowDataPreviewGroupBox = new System.Windows.Forms.GroupBox();
+            this.flowDataView = new System.Windows.Forms.TreeView();
             this.mainMenu.SuspendLayout();
+            this.configGroupBox.SuspendLayout();
+            this.leftPanel.SuspendLayout();
+            this.flowDataPreviewGroupBox.SuspendLayout();
             this.SuspendLayout();
             // 
             // tabControl
             // 
             this.tabControl.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.tabControl.Location = new System.Drawing.Point(229, 24);
+            this.tabControl.Location = new System.Drawing.Point(200, 24);
             this.tabControl.Name = "tabControl";
             this.tabControl.SelectedIndex = 0;
-            this.tabControl.Size = new System.Drawing.Size(852, 612);
+            this.tabControl.Size = new System.Drawing.Size(881, 612);
             this.tabControl.TabIndex = 0;
             this.tabControl.SelectedIndexChanged += new System.EventHandler(this.tabControl_SelectedIndexChanged);
             this.tabControl.Deselecting += new System.Windows.Forms.TabControlCancelEventHandler(this.tabControl_Deselecting);
@@ -131,13 +139,13 @@
             // 
             // configView
             // 
-            this.configView.Dock = System.Windows.Forms.DockStyle.Left;
+            this.configView.Dock = System.Windows.Forms.DockStyle.Fill;
             this.configView.ImageIndex = 0;
             this.configView.ImageList = this.configImageList;
-            this.configView.Location = new System.Drawing.Point(0, 24);
+            this.configView.Location = new System.Drawing.Point(3, 16);
             this.configView.Name = "configView";
             this.configView.SelectedImageIndex = 0;
-            this.configView.Size = new System.Drawing.Size(229, 612);
+            this.configView.Size = new System.Drawing.Size(194, 281);
             this.configView.TabIndex = 2;
             this.configView.AfterCollapse += new System.Windows.Forms.TreeViewEventHandler(this.configView_AfterExpandOrCollapse);
             this.configView.AfterExpand += new System.Windows.Forms.TreeViewEventHandler(this.configView_AfterExpandOrCollapse);
@@ -152,22 +160,74 @@
             this.configImageList.ImageSize = new System.Drawing.Size(20, 20);
             this.configImageList.TransparentColor = System.Drawing.Color.Transparent;
             // 
-            // splitter1
+            // splitter
             // 
-            this.splitter1.Location = new System.Drawing.Point(229, 24);
-            this.splitter1.Name = "splitter1";
-            this.splitter1.Size = new System.Drawing.Size(3, 612);
-            this.splitter1.TabIndex = 3;
-            this.splitter1.TabStop = false;
+            this.splitter.Location = new System.Drawing.Point(200, 24);
+            this.splitter.Name = "splitter";
+            this.splitter.Size = new System.Drawing.Size(3, 612);
+            this.splitter.TabIndex = 3;
+            this.splitter.TabStop = false;
+            // 
+            // configGroupBox
+            // 
+            this.configGroupBox.Controls.Add(this.configView);
+            this.configGroupBox.Dock = System.Windows.Forms.DockStyle.Top;
+            this.configGroupBox.Location = new System.Drawing.Point(0, 0);
+            this.configGroupBox.Name = "configGroupBox";
+            this.configGroupBox.Size = new System.Drawing.Size(200, 300);
+            this.configGroupBox.TabIndex = 4;
+            this.configGroupBox.TabStop = false;
+            this.configGroupBox.Text = "Configuration";
+            // 
+            // leftPanel
+            // 
+            this.leftPanel.Controls.Add(this.flowDataPreviewGroupBox);
+            this.leftPanel.Controls.Add(this.leftPanelSplitter);
+            this.leftPanel.Controls.Add(this.configGroupBox);
+            this.leftPanel.Dock = System.Windows.Forms.DockStyle.Left;
+            this.leftPanel.Location = new System.Drawing.Point(0, 24);
+            this.leftPanel.Name = "leftPanel";
+            this.leftPanel.Size = new System.Drawing.Size(200, 612);
+            this.leftPanel.TabIndex = 4;
+            // 
+            // leftPanelSplitter
+            // 
+            this.leftPanelSplitter.Dock = System.Windows.Forms.DockStyle.Top;
+            this.leftPanelSplitter.Location = new System.Drawing.Point(0, 300);
+            this.leftPanelSplitter.Name = "leftPanelSplitter";
+            this.leftPanelSplitter.Size = new System.Drawing.Size(200, 3);
+            this.leftPanelSplitter.TabIndex = 5;
+            this.leftPanelSplitter.TabStop = false;
+            // 
+            // flowDataPreviewGroupBox
+            // 
+            this.flowDataPreviewGroupBox.Controls.Add(this.flowDataView);
+            this.flowDataPreviewGroupBox.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.flowDataPreviewGroupBox.Location = new System.Drawing.Point(0, 303);
+            this.flowDataPreviewGroupBox.Name = "flowDataPreviewGroupBox";
+            this.flowDataPreviewGroupBox.Size = new System.Drawing.Size(200, 309);
+            this.flowDataPreviewGroupBox.TabIndex = 6;
+            this.flowDataPreviewGroupBox.TabStop = false;
+            this.flowDataPreviewGroupBox.Text = "Flow Data Preview";
+            // 
+            // flowDataView
+            // 
+            this.flowDataView.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.flowDataView.Indent = 23;
+            this.flowDataView.ItemHeight = 20;
+            this.flowDataView.Location = new System.Drawing.Point(3, 16);
+            this.flowDataView.Name = "flowDataView";
+            this.flowDataView.Size = new System.Drawing.Size(194, 290);
+            this.flowDataView.TabIndex = 0;
             // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1081, 636);
-            this.Controls.Add(this.splitter1);
+            this.Controls.Add(this.splitter);
             this.Controls.Add(this.tabControl);
-            this.Controls.Add(this.configView);
+            this.Controls.Add(this.leftPanel);
             this.Controls.Add(this.mainMenu);
             this.KeyPreview = true;
             this.MainMenuStrip = this.mainMenu;
@@ -178,6 +238,9 @@
             this.Load += new System.EventHandler(this.MainForm_Load);
             this.mainMenu.ResumeLayout(false);
             this.mainMenu.PerformLayout();
+            this.configGroupBox.ResumeLayout(false);
+            this.leftPanel.ResumeLayout(false);
+            this.flowDataPreviewGroupBox.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -194,10 +257,15 @@
         public System.Windows.Forms.ToolStripMenuItem captureMenuItem;
         public System.Windows.Forms.ContextMenuStrip contextMenuStrip;
         private System.Windows.Forms.TreeView configView;
-        private System.Windows.Forms.Splitter splitter1;
+        private System.Windows.Forms.Splitter splitter;
         private System.Windows.Forms.ImageList configImageList;
         private System.Windows.Forms.ToolStripMenuItem protocolMenuItem;
         private System.Windows.Forms.ToolStripMenuItem applyTemplateMenuItem;
+        private System.Windows.Forms.GroupBox configGroupBox;
+        private System.Windows.Forms.Panel leftPanel;
+        private System.Windows.Forms.Splitter leftPanelSplitter;
+        private System.Windows.Forms.GroupBox flowDataPreviewGroupBox;
+        private System.Windows.Forms.TreeView flowDataView;
     }
 }
 

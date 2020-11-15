@@ -73,9 +73,29 @@ namespace _010Proxy.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap IconClientSource_v2 {
+            get {
+                object obj = ResourceManager.GetObject("IconClientSource_v2", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap IconServerSource {
             get {
                 object obj = ResourceManager.GetObject("IconServerSource", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap IconServerSource_v2 {
+            get {
+                object obj = ResourceManager.GetObject("IconServerSource_v2", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

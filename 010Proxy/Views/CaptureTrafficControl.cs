@@ -24,12 +24,6 @@ namespace _010Proxy.Views
         public CaptureTrafficControl()
         {
             InitializeComponent();
-            Setup();
-        }
-
-        private void Setup()
-        {
-            // olvClientColumn.GroupKeyGetter = x => ((ConnectionInfo)x).AppName;
         }
 
         public void StartNetworkAnalysis(ICaptureDevice device)
@@ -46,6 +40,7 @@ namespace _010Proxy.Views
 
         public void StopNetworkAnalysis()
         {
+            _connections.Clear();
             ParentForm.Sniffer.OnPacketReceive -= OnPacketReceive;
             ParentForm.Sniffer.StopCapture();
             UpdateMenu();

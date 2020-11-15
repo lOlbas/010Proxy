@@ -26,6 +26,7 @@ namespace _010Proxy.Network
 
         public void StartCapture(ICaptureDevice device)
         {
+            // TODO: when closing and creating new CaptureTrafficControl tab, it will cause income packets to double, repeat again - triple them
             _activeDevice = device;
 
             _activeDevice.OnPacketArrival += OnPacketArrival;
@@ -50,6 +51,7 @@ namespace _010Proxy.Network
         public void StopCapture()
         {
             _activeDevice?.StopCapture();
+            _activeDevice = null;
         }
 
         public void OnPacketArrival(object sender, CaptureEventArgs e)

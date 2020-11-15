@@ -1,10 +1,11 @@
 ﻿using _010Proxy.Forms;
 using _010Proxy.Network;
 using _010Proxy.Network.TCP;
-using _010Proxy.Templates;
+using _010Proxy.Parsers;
 using _010Proxy.Types;
 using Be.Windows.Forms;
-using Microsoft.CSharp;
+using Microsoft.CodeDom.Providers.DotNetCompilerPlatform;
+using ProtoBuf;
 using System;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
@@ -17,12 +18,22 @@ namespace _010Proxy.Views
     public partial class TcpReconstructedInfoControl : ProxyTabControl
     {
         private ConnectionInfo _connectionInfo;
-        private ProtocolNode _protocol;
         private int _flowIndex = 1;
         private bool _stickToBottom = true;
 
-        private Assembly _protocolAssembly = null;
-        private List<Type> _rootTemplates = new List<Type>();
+        private TemplateParser _templateParser;
+
+        private static readonly IEnumerable<string> DefaultNamespaces =
+            new[]
+            {
+                "System",
+                "System.IO",
+                "System.Net",
+                "System.Linq",
+                "System.Text",
+                "System.Text.RegularExpressions",
+                "System.Collections.Generic"
+            };
 
         public TcpReconstructedInfoControl()
         {
@@ -46,7 +57,7 @@ namespace _010Proxy.Views
         {
             packetsTable.Invoke((MethodInvoker)delegate
             {
-                var icon = tcpFlow.Sender == SenderEnum.Client ? Properties.Resources.IconClientSource : Properties.Resources.IconServerSource;
+                var icon = tcpFlow.Sender == SenderEnum.Client ? Properties.Resources.IconClientSource_v2 : Properties.Resources.IconServerSource_v2;
                 var firstPacketTime = tcpFlow.FirstPacketTime.Date.ToLocalTime().ToString("HH:mm:ss.ffffff");
                 var lastPacketTime = tcpFlow.LastPacketTime.Date.ToLocalTime().ToString("HH:mm:ss.ffffff");
 
@@ -90,7 +101,7 @@ namespace _010Proxy.Views
 
         public void ApplyProtocol(ProtocolNode protocol)
         {
-            _protocol = protocol;
+            _templateParser = new TemplateParser();
 
             var compilerParams = new CompilerParameters
             {
@@ -100,7 +111,7 @@ namespace _010Proxy.Views
                 CompilerOptions = "/optimize"
             };
 
-            compilerParams.ReferencedAssemblies.AddRange(new[] { "System.dll", "mscorlib.dll", "System.Core.dll", Assembly.GetEntryAssembly()?.Location });
+            compilerParams.ReferencedAssemblies.AddRange(new[] { "System.dll", "mscorlib.dll", "System.Core.dll", Assembly.GetEntryAssembly()?.Location, typeof(ProtoContractAttribute).Assembly.Location });
 
             var provider = new CSharpCodeProvider();
             var codes = protocol.Templates.Select(template => "using _010Proxy.Templates.Attributes; using _010Proxy.Templates; " + template.Value.Code).ToArray();
@@ -115,7 +126,7 @@ namespace _010Proxy.Views
                 throw new Exception(text);
             }
 
-            ExtractRootTemplates(compile.CompiledAssembly);
+            _templateParser.ParseAssembly(compile.CompiledAssembly);
 
             var rowsCount = packetsTable.Rows.Count;
 
@@ -127,6 +138,11 @@ namespace _010Proxy.Views
 
         private void ApplyProtocol(int rowIndex)
         {
+            if (_templateParser is null)
+            {
+                return;
+            }
+
             if (packetsTable.Rows.Count < rowIndex)
             {
                 return;
@@ -136,18 +152,14 @@ namespace _010Proxy.Views
             {
                 var tcpFlow = (TcpFlow)packetsTable.Rows[rowIndex].Tag;
 
-                foreach (var type in _rootTemplates)
+                if (tcpFlow.FlowData.Count > 0)
+                //foreach (var type in _rootTemplates)
                 {
                     try
                     {
-                        var templateClass = Activator.CreateInstance(type);
-                        type.InvokeMember("ParseData", BindingFlags.Default | BindingFlags.InvokeMethod, null, templateClass, new object[] { tcpFlow.FlowData.ToArray() });
-
-                        var flowInfo = type.InvokeMember("ToString", BindingFlags.Default | BindingFlags.InvokeMethod, null, templateClass, new object[] { });
-
-                        packetsTable.Rows[rowIndex].Cells[6].Value = flowInfo;
-
-                        break;
+                        tcpFlow.Data = _templateParser.Parse(tcpFlow.FlowData);
+                        packetsTable.Rows[rowIndex].Cells[6].Value = "";
+                        //break;
                     }
                     catch (Exception e)
                     {
@@ -157,35 +169,18 @@ namespace _010Proxy.Views
             }
         }
 
-        private void ExtractRootTemplates(Assembly assembly)
-        {
-            _protocolAssembly = assembly;
-
-            foreach (var module in assembly.GetModules())
-            {
-                foreach (var type in module.GetTypes())
-                {
-                    if (typeof(IRootTemplate).IsAssignableFrom(type))
-                    {
-                        _rootTemplates.Add(type);
-                    }
-                }
-            }
-
-            if (_rootTemplates.Count == 0)
-            {
-                // TODO: show error that no root template found.
-                _protocolAssembly = null;
-                _rootTemplates.Clear();
-            }
-        }
-
         private void packetsTable_SelectionChanged(object sender, System.EventArgs e)
         {
             var flowIndex = (int)packetsTable.Rows[packetsTable.CurrentCell.RowIndex].Cells[1].Value;
             var tcpFlow = _connectionInfo.Flows[flowIndex - 1];
 
             packetPreview.ByteProvider = new DynamicByteProvider(tcpFlow.FlowData);
+
+            if (!(_templateParser is null) && tcpFlow.FlowData.Count > 0)
+            {
+                var data = _templateParser.Parse(tcpFlow.FlowData);
+                ParentForm.CreateFlowDataPreview(data);
+            }
         }
 
         private void packetsTable_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
@@ -194,9 +189,17 @@ namespace _010Proxy.Views
             templateForm.Show();
         }
 
+        public override void OnClose()
+        {
+            if (!(_connectionInfo is null))
+            {
+                _connectionInfo.OnNewFlow -= OnNewFlow;
+                _connectionInfo.OnFlowUpdate -= OnFlowUpdate;
+            }
+        }
+
         public override void OnShow()
         {
-
             UpdateMenu(true);
         }
 

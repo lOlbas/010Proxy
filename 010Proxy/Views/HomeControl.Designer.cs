@@ -58,6 +58,7 @@
             // availableDevicesListView
             // 
             this.availableDevicesListView.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.availableDevicesListView.FullRowSelect = true;
             this.availableDevicesListView.HideSelection = false;
             this.availableDevicesListView.Location = new System.Drawing.Point(209, 256);
             this.availableDevicesListView.MultiSelect = false;

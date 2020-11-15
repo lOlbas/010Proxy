@@ -40,7 +40,7 @@ namespace _010Proxy.Views
         {
             if (availableDevicesListView.SelectedIndices.Count > 0)
             {
-                var device = availableDevicesListView.SelectedItems[availableDevicesListView.SelectedIndices[0]].Tag as ICaptureDevice;
+                var device = availableDevicesListView.SelectedItems[0].Tag as ICaptureDevice;
                 ParentForm?.StartNetworkAnalysis(device);
             }
         }

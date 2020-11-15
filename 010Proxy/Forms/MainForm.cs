@@ -4,6 +4,9 @@ using _010Proxy.Utils;
 using _010Proxy.Views;
 using SharpPcap;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using System.Windows.Forms;
 
 namespace _010Proxy.Forms
@@ -119,7 +122,7 @@ namespace _010Proxy.Forms
 
         #region Tabs creation
 
-        public void CreateWelcomeTab()
+        private void CreateWelcomeTab()
         {
             var newTab = new TabPage("Welcome");
             var newControl = new HomeControl
@@ -263,6 +266,67 @@ namespace _010Proxy.Forms
             }
 
             CreateConnectionFlowTab(connectionInfo);
+        }
+
+        public void CreateFlowDataPreview(Dictionary<object, object> data)
+        {
+            flowDataView.Nodes.Clear();
+
+            if (data is null)
+            {
+                return;
+            }
+
+            foreach (var node in DictionaryToTreeViewNodes(data))
+            {
+                flowDataView.Nodes.Add(node);
+            }
+        }
+
+        private IEnumerable<TreeNode> DictionaryToTreeViewNodes(Dictionary<object, object> data)
+        {
+            var nodes = new List<TreeNode>();
+
+            foreach (var item in data)
+            {
+                TreeNode newNode;
+
+                if (item.Value is Dictionary<object, object> childData)
+                {
+                    newNode = new TreeNode($"{item.Key}");
+                    foreach (var node in DictionaryToTreeViewNodes(childData))
+                    {
+                        newNode.Nodes.Add(node);
+                    }
+                }
+                else if (item.Value.GetType().IsClass)
+                {
+                    newNode = new TreeNode($"{item.Key}");
+
+                    foreach (var node in DictionaryToTreeViewNodes(item.Value.GetType()
+                        .GetProperties(BindingFlags.Instance | BindingFlags.Public)
+                        .Select(pi => new { pi.Name, Value = pi.GetValue(item.Value, null) })
+                        .Union(
+                            item.Value.GetType()
+                                .GetFields()
+                                .Select(fi => new { fi.Name, Value = fi.GetValue(item.Value) })
+                        )
+                        .ToDictionary(ks => (object)ks.Name, vs => vs.Value)))
+                    {
+                        newNode.Nodes.Add(node);
+                    }
+                }
+                else
+                {
+                    newNode = new TreeNode($"{item.Key} = {item.Value}");
+                }
+
+                newNode.Expand();
+
+                nodes.Add(newNode);
+            }
+
+            return nodes;
         }
 
         #endregion
