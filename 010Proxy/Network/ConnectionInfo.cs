@@ -80,7 +80,7 @@ namespace _010Proxy.Network
                     break;
             }
 
-            if (tcpFlow is null)
+            if (tcpFlow == null)
             {
                 tcpFlow = new TcpFlow();
                 Flows.Add(tcpFlow);
@@ -115,7 +115,7 @@ namespace _010Proxy.Network
         {
             var info = (ConnectionInfo)obj;
 
-            if (info is null)
+            if (info == null)
             {
                 return false;
             }

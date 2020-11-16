@@ -38,36 +38,6 @@ namespace _010Proxy.Forms
             configImageList.Images.Add(IconExtractor.Extract(70));
         }
 
-        /*
-        private void CreateCatalogNodes(TreeNode parentNode, List<ConfigCatalogNode> catalog)
-        {
-            foreach (var catalogItem in catalog)
-            {
-                var newNode = new TreeNode(catalogItem.Name, 0, 0)
-                {
-                    Tag = catalogItem
-                };
-
-                if (catalogItem.ChildCatalogNodes.Count > 0)
-                {
-                    CreateCatalogNodes(newNode, catalogItem.ChildCatalogNodes);
-                }
-
-                foreach (var ipNode in catalogItem.ChildIPNodes)
-                {
-                    newNode.Nodes.Add(new TreeNode(ipNode.Name));
-                }
-
-                if (!catalogItem.NodeOpened)
-                {
-                    newNode.Collapse();
-                }
-
-                parentNode.Nodes.Add(newNode);
-            }
-        }
-         */
-
         private void LoadConfig()
         {
             configView.Nodes.Clear();
@@ -76,35 +46,14 @@ namespace _010Proxy.Forms
 
             foreach (var app in config.Applications)
             {
-                var newAppNode = new TreeNode(app.Name, 0, 0)
+                var newAppNode = new TreeNode(app.Name, 0, 0) { Tag = app };
+
+                foreach (var repository in app.Protocols)
                 {
-                    Tag = app
-                };
-
-                foreach (var protocol in app.Protocols)
-                {
-                    var newProtocolNode = new TreeNode(protocol.Name, 0, 0)
-                    {
-                        Tag = protocol
-                    };
-
-                    foreach (var template in protocol.Templates)
-                    {
-                        var newTemplateNode = new TreeNode(template.Value.Name, 1, 1)
-                        {
-                            Tag = template.Value
-                        };
-
-                        newProtocolNode.Nodes.Add(newTemplateNode);
-                    }
-
-                    if (protocol.NodeOpened)
-                    {
-                        newProtocolNode.Expand();
-                    }
-
-                    newAppNode.Nodes.Add(newProtocolNode);
+                    newAppNode.Nodes.Add(RepositoryToTreeNodes(repository));
                 }
+
+                // TODO: do not display IPs in config view, manage them in a separate window
 
                 if (app.NodeOpened)
                 {
@@ -113,6 +62,23 @@ namespace _010Proxy.Forms
 
                 configView.Nodes.Add(newAppNode);
             }
+        }
+
+        private TreeNode RepositoryToTreeNodes(RepositoryNode repository)
+        {
+            var node = new TreeNode(repository.Name, repository.IconIndex, repository.IconIndex) { Tag = repository };
+
+            foreach (var childRepository in repository.Items)
+            {
+                node.Nodes.Add(RepositoryToTreeNodes(childRepository));
+            }
+
+            if (repository.NodeOpened)
+            {
+                node.Expand();
+            }
+
+            return node;
         }
 
         public void SaveConfig()
@@ -204,9 +170,9 @@ namespace _010Proxy.Forms
             newControl.LoadFlows(connectionInfo);
         }
 
-        private void CreateTemplateEditorTab(TemplateNode template)
+        private void CreateTemplateEditorTab(RepositoryNode repositoryNode)
         {
-            var newTab = new TabPage($"{template.Name}");
+            var newTab = new TabPage($"{repositoryNode.Name}");
             var newControl = new TemplateEditorControl()
             {
                 Dock = DockStyle.Fill,
@@ -215,12 +181,12 @@ namespace _010Proxy.Forms
             };
 
             newTab.Controls.Add(newControl);
-            newTab.Tag = template;
+            newTab.Tag = repositoryNode;
 
             tabControl.TabPages.Add(newTab);
             tabControl.SelectTab(newTab);
 
-            newControl.LoadTemplate(template);
+            newControl.LoadTemplate(repositoryNode);
         }
 
         #endregion
@@ -258,7 +224,7 @@ namespace _010Proxy.Forms
                 {
                     if (Equals(tabConnectionInfo, connectionInfo))
                     {
-                        // TODO: show prompt to notify user tab with this connection info already exists and whether he wants to still open new tab
+                        // TODO: show prompt to notify user tab with this flows info already exists and whether he wants to still open new tab
                         tabControl.SelectedTab = tabPage;
                         return;
                     }
@@ -272,7 +238,7 @@ namespace _010Proxy.Forms
         {
             flowDataView.Nodes.Clear();
 
-            if (data is null)
+            if (data == null)
             {
                 return;
             }
@@ -347,6 +313,12 @@ namespace _010Proxy.Forms
                     if (e.Control)
                     {
                         var selectedIndex = tabControl.SelectedIndex;
+
+                        if (tabControl.SelectedTab.Controls[0] is HomeControl)
+                        {
+                            break;
+                        }
+
                         ((ProxyTabControl)tabControl.SelectedTab.Controls[0]).OnClose();
                         tabControl.TabPages.Remove(tabControl.SelectedTab);
 
@@ -360,8 +332,6 @@ namespace _010Proxy.Forms
             }
         }
 
-        #endregion
-
         private void tabControl_SelectedIndexChanged(object sender, EventArgs e)
         {
 
@@ -372,43 +342,115 @@ namespace _010Proxy.Forms
             // ((ProxyTabControl)e.TabPage.Controls[0]).OnHide();
         }
 
+        private void configView_NodeMouseClick(object sender, TreeNodeMouseClickEventArgs e)
+        {
+            configView.SelectedNode = configView.GetNodeAt(e.X, e.Y);
+        }
+
+        private void configView_NodeMouseDoubleClick(object sender, TreeNodeMouseClickEventArgs e)
+        {
+            OnOpenTemplateMenuClick(sender, e);
+        }
+
+        private void configView_AfterExpandOrCollapse(object sender, TreeViewEventArgs e)
+        {
+            if (configView.SelectedNode == null)
+            {
+                return;
+            }
+
+            ((ConfigNode)configView.SelectedNode.Tag).NodeOpened = e.Node.IsExpanded;
+        }
+
+        private void configView_AfterLabelEdit(object sender, NodeLabelEditEventArgs e)
+        {
+            if (!string.IsNullOrEmpty(e.Label))
+            {
+                // TODO: somehow forbid same names for nodes
+
+                ((ConfigNode)e.Node.Tag).Name = e.Label;
+
+                e.Node.EndEdit(false);
+
+                _configManager.Save();
+            }
+            else
+            {
+                e.Node.EndEdit(true);
+            }
+        }
+
+        #endregion
+
         private void CreateConfigContextMenu(object sender, MouseEventArgs e)
         {
             configView.SelectedNode = configView.GetNodeAt(e.X, e.Y);
 
             if (e.Button == MouseButtons.Right)
             {
+                /*
+                TODO: Memory leak when creating new context menu
+                while (contextMenuStrip.Items.Count > 0)
+                {
+                    var item = contextMenuStrip.Items[contextMenuStrip.Items.Count - 1];
+                    contextMenuStrip.Items.RemoveAt(contextMenuStrip.Items.Count - 1);
+
+                    item.Dispose();
+                }
+                
+                contextMenuStrip.Dispose();
+                contextMenuStrip = null;
+                contextMenuStrip = new ContextMenuStrip(this.components);
+                */
+
                 contextMenuStrip.Items.Clear();
 
-                if (configView.SelectedNode is null)
+                if (configView.SelectedNode == null)
                 {
                     contextMenuStrip.Items.Add(new ToolStripMenuItem("Create Application", null, OnCreateApplicationMenuClick));
                 }
                 else
                 {
+                    var canApplyProtocol = tabControl.SelectedTab.Controls[0] is TcpReconstructedInfoControl;
+
                     if (configView.SelectedNode.Tag is ApplicationNode)
                     {
                         contextMenuStrip.Items.Add(new ToolStripMenuItem("Create Protocol", null, OnCreateProtocolMenuClick));
                     }
 
-                    if (configView.SelectedNode.Tag is ProtocolNode protocolNode)
+                    if (configView.SelectedNode.Tag is RepositoryNode repository)
                     {
-                        contextMenuStrip.Items.Add(new ToolStripMenuItem("Apply protocol", null, OnApplyProtocolMenuClick)
+                        switch (repository.Type)
                         {
-                            Enabled = tabControl.SelectedTab.Controls[0] is TcpReconstructedInfoControl,
-                            Tag = protocolNode
-                        });
+                            case EntryType.Protocol:
+                                contextMenuStrip.Items.Add(new ToolStripMenuItem("Add", null, new ToolStripItem[]
+                                {
+                                    new ToolStripMenuItem("New Template", null, OnNewTemplateMenuClick),
+                                    new ToolStripMenuItem("New Root Template", null, OnCreateRootTemplateMenuClick),
+                                    new ToolStripMenuItem("New Folder", null, OnNewFolderMenuClick)
+                                }));
+                                contextMenuStrip.Items.Add(new ToolStripSeparator());
 
-                        contextMenuStrip.Items.Add(new ToolStripMenuItem("New root template", null, OnCreateRootTemplateMenuClick));
-                        contextMenuStrip.Items.Add(new ToolStripMenuItem("New template", null, OnNewTemplateMenuClick));
+                                contextMenuStrip.Items.Add(new ToolStripMenuItem("Apply protocol", null, OnApplyProtocolMenuClick) { Enabled = canApplyProtocol });
+                                break;
+
+                            case EntryType.Folder:
+                                contextMenuStrip.Items.Add(new ToolStripMenuItem("Add", null, new ToolStripItem[]
+                                {
+                                    new ToolStripMenuItem("New Template", null, OnNewTemplateMenuClick),
+                                    new ToolStripMenuItem("New Root Template", null, OnCreateRootTemplateMenuClick),
+                                    new ToolStripMenuItem("New Folder", null, OnNewFolderMenuClick),
+                                }));
+                                break;
+
+                            case EntryType.Template:
+                                contextMenuStrip.Items.Add(new ToolStripMenuItem("Open", null, OnOpenTemplateMenuClick));
+                                break;
+                        }
                     }
 
-                    if (configView.SelectedNode.Tag is TemplateNode)
-                    {
-                        // contextMenuStrip.Items.Add(new ToolStripMenuItem("Rename", null, OnRenameTemplateMenuClick));
-                        contextMenuStrip.Items.Add(new ToolStripMenuItem("Edit template", null, OnEditTemplateMenuClick));
-                    }
-
+                    contextMenuStrip.Items.Add(new ToolStripSeparator());
+                    contextMenuStrip.Items.Add(new ToolStripMenuItem("Rename", null, OnRenameNodeMenuClick));
                     contextMenuStrip.Items.Add(new ToolStripMenuItem("Delete", null, OnDeleteNodeMenuClick));
                 }
 
@@ -420,123 +462,170 @@ namespace _010Proxy.Forms
 
         private void OnCreateApplicationMenuClick(object sender, EventArgs e)
         {
-            if (configView.SelectedNode is null)
-            {
-                var name = Prompt.ShowDialog("New application:", "New Application");
+            var newApp = new ApplicationNode();
+            var newNode = new TreeNode("New Application", 0, 0) { Tag = newApp };
 
-                if (name != "")
-                {
-                    var newApp = new ApplicationNode() { Name = name };
-                    var newNode = new TreeNode(name, 0, 0) { Tag = newApp };
+            _configManager.Config.Applications.Add(newApp);
+            configView.Nodes.Add(newNode);
+            configView.SelectedNode = newNode;
 
-                    _configManager.Config.Applications.Add(newApp);
-                    configView.Nodes.Add(newNode);
-                    configView.SelectedNode = newNode;
-                }
-            }
+            configView.LabelEdit = true;
+            configView.SelectedNode.BeginEdit();
         }
 
         private void OnCreateProtocolMenuClick(object sender, EventArgs e)
         {
-            if (!(configView.SelectedNode is null) && configView.SelectedNode.Tag is ApplicationNode appNode)
+            if (configView.SelectedNode != null && configView.SelectedNode.Tag is ApplicationNode appNode)
             {
-                var name = Prompt.ShowDialog("New protocol:", "New Protocol");
+                var newProtocol = new RepositoryNode(EntryType.Protocol);
+                var newNode = new TreeNode("New Protocol", 0, 0) { Tag = newProtocol };
 
-                if (name != "")
-                {
-                    var newProtocol = new ProtocolNode() { Name = name };
-                    var newNode = new TreeNode(name, 0, 0) { Tag = newProtocol };
+                appNode.Protocols.Add(newProtocol);
+                configView.SelectedNode.Nodes.Add(newNode);
+                configView.SelectedNode = newNode;
 
-                    appNode.Protocols.Add(newProtocol);
-                    configView.SelectedNode.Nodes.Add(newNode);
-                    configView.SelectedNode = newNode;
-                }
+                configView.LabelEdit = true;
+                configView.SelectedNode.BeginEdit();
             }
         }
 
         private void OnCreateRootTemplateMenuClick(object sender, EventArgs e)
         {
-            if (!(configView.SelectedNode is null) && configView.SelectedNode.Tag is ProtocolNode protocolNode)
+            if (configView.SelectedNode != null && configView.SelectedNode.Tag is RepositoryNode repository && repository.CanHaveFiles())
             {
-                var name = Prompt.ShowDialog($"New root template name for {protocolNode.Name}:", "New Root Template");
+                var name = Prompt.ShowDialog("New root template name:", "New Root Template");
 
                 if (name != "")
                 {
-                    var template = new TemplateNode()
-                    {
-                        Name = name,
-                        Code =
-$@"namespace {protocolNode.Name} {{
+                    var template =
+$@"namespace {string.Join(".", repository.PathTo().ToArray())}
+{{
     [RootPacket]
     public class {name} : IRootTemplate
     {{
         
     }}
 }}
-"
-                    };
+";
 
-                    var newNode = new TreeNode(name, 1, 1) { Tag = template };
+                    var newItem = repository.AddItem(EntryType.Template, name, template);
+                    var newNode = new TreeNode(name, 1, 1) { Tag = newItem };
 
-                    protocolNode.Templates.Add(name, template);
                     configView.SelectedNode.Nodes.Add(newNode);
                     configView.SelectedNode = newNode;
 
-                    CreateTemplateEditorTab(template);
+                    _configManager.Save();
+
+                    CreateTemplateEditorTab(newItem);
                 }
             }
         }
 
         private void OnNewTemplateMenuClick(object sender, EventArgs e)
         {
-            if (!(configView.SelectedNode is null) && configView.SelectedNode.Tag is ProtocolNode protocolNode)
+            if (configView.SelectedNode != null && configView.SelectedNode.Tag is RepositoryNode repository)
             {
-                var name = Prompt.ShowDialog($"New template name for {protocolNode.Name}:", "New Template");
+                var name = Prompt.ShowDialog($"New template name:", "New Template");
 
                 if (name != "")
                 {
-                    var template = new TemplateNode()
-                    {
-                        Name = name,
-                        Code =
-$@"namespace {protocolNode.Name} {{
+                    var template =
+$@"namespace {string.Join(".", repository.PathTo().ToArray())}
+{{
     public class {name}
     {{
         
     }}
 }}
-"
-                    };
-                    var newNode = new TreeNode(name, 1, 1) { Tag = template };
+";
 
-                    protocolNode.Templates.Add(name, template);
+                    var newItem = repository.AddItem(EntryType.Template, name, template);
+                    var newNode = new TreeNode(name, 1, 1) { Tag = newItem };
+
                     configView.SelectedNode.Nodes.Add(newNode);
                     configView.SelectedNode = newNode;
 
-                    CreateTemplateEditorTab(template);
+                    _configManager.Save();
+
+                    CreateTemplateEditorTab(newItem);
                 }
             }
         }
 
-        private void OnEditTemplateMenuClick(object sender, EventArgs e)
+        private void OnNewFolderMenuClick(object sender, EventArgs e)
         {
-            if (!(configView.SelectedNode is null))
+            if (configView.SelectedNode != null && configView.SelectedNode.Tag is RepositoryNode repository && repository.CanHaveFiles())
             {
-                if (configView.SelectedNode.Tag is TemplateNode templateNode)
+                var newProtocol = repository.AddItem(EntryType.Folder);
+                var newNode = new TreeNode("New Folder", 0, 0) { Tag = newProtocol };
+
+                configView.SelectedNode.Nodes.Add(newNode);
+                configView.SelectedNode = newNode;
+
+                configView.LabelEdit = true;
+                configView.SelectedNode.BeginEdit();
+            }
+        }
+
+        private void OnOpenTemplateMenuClick(object sender, EventArgs e)
+        {
+            if (configView.SelectedNode != null)
+            {
+                if (configView.SelectedNode.Tag is RepositoryNode repository && repository.Content != null)
                 {
-                    CreateTemplateEditorTab(templateNode);
+                    foreach (TabPage tabPage in tabControl.TabPages)
+                    {
+                        if (tabPage.Tag is RepositoryNode repositoryNode)
+                        {
+                            if (Equals(repositoryNode, repository))
+                            {
+                                tabControl.SelectedTab = tabPage;
+                                return;
+                            }
+                        }
+                    }
+
+                    CreateTemplateEditorTab(repository);
                 }
             }
         }
 
-        private void OnDeleteRootTemplateMenuClick(object sender, EventArgs e)
+        private void OnRenameNodeMenuClick(object sender, EventArgs e)
         {
-            if (!(configView.SelectedNode is null))
+            if (configView.SelectedNode != null)
             {
-                if (configView.SelectedNode.Tag is ProtocolNode protocolNode)
+                configView.LabelEdit = true;
+                configView.SelectedNode.BeginEdit();
+
+                /*
+                var name = "";
+
+                if (configNode is ApplicationNode)
                 {
-                    // protocolNode.RootTemplate = new TemplateNode();
+                    name = Prompt.ShowDialog("New application name:", $"Rename application \"{configNode.Name}\"");
                 }
+
+                if (configNode is IPNode)
+                {
+                    name = Prompt.ShowDialog("New IP name:", $"Rename IP \"{configNode.Name}\"");
+                }
+
+                if (configNode is ProtocolNode)
+                {
+                    name = Prompt.ShowDialog("New protocol name:", $"Rename protocol \"{configNode.Name}\"");
+                }
+
+                if (configNode is TemplateNode)
+                {
+                    name = Prompt.ShowDialog("New template name:", $"Rename template \"{configNode.Name}\"");
+                }
+
+                if (name != "")
+                {
+                    configNode.Name = name;
+
+                    _configManager.Save();
+                }*/
             }
         }
 
@@ -559,64 +648,43 @@ $@"namespace {protocolNode.Name} {{
 
                     if (parentNode.Tag is ApplicationNode parentAppNode)
                     {
-                        if (configView.SelectedNode.Tag is ProtocolNode protocolNode)
+                        if (configView.SelectedNode.Tag is IPNode ipNode)
                         {
-                            parentAppNode.Protocols.Remove(protocolNode);
+                            parentAppNode.IPs.Remove(ipNode);
+                        }
+
+                        if (configView.SelectedNode.Tag is RepositoryNode repositoryNode)
+                        {
+                            parentAppNode.Protocols.Remove(repositoryNode);
                         }
                     }
 
-                    if (parentNode.Tag is ProtocolNode parentProtocolNode)
+                    if (parentNode.Tag is RepositoryNode parentRepositoryNode)
                     {
-                        if (configView.SelectedNode.Tag is TemplateNode templateNode)
+                        if (configView.SelectedNode.Tag is RepositoryNode repositoryNode)
                         {
-                            parentProtocolNode.Templates.Remove(templateNode.EventType);
+                            parentRepositoryNode.Items.Remove(repositoryNode);
                         }
                     }
                 }
 
                 configView.SelectedNode.Remove();
+
+                _configManager.Save();
             }
         }
 
         private void OnApplyProtocolMenuClick(object sender, EventArgs e)
         {
-            var menuItem = (ToolStripMenuItem)sender;
-            var protocol = (ProtocolNode)menuItem.Tag;
-
-            if (tabControl.SelectedTab.Controls[0] is TcpReconstructedInfoControl control)
+            if (configView.SelectedNode != null && configView.SelectedNode.Tag is RepositoryNode repositoryNode)
             {
-                control.ApplyProtocol(protocol);
+                if (tabControl.SelectedTab.Controls[0] is TcpReconstructedInfoControl control)
+                {
+                    control.ApplyProtocol(repositoryNode);
+                }
             }
         }
 
         #endregion
-
-        private void configView_NodeMouseClick(object sender, TreeNodeMouseClickEventArgs e)
-        {
-            configView.SelectedNode = configView.GetNodeAt(e.X, e.Y);
-        }
-
-        private void configView_NodeMouseDoubleClick(object sender, TreeNodeMouseClickEventArgs e)
-        {
-            OnEditTemplateMenuClick(sender, e);
-        }
-
-        private void configView_AfterExpandOrCollapse(object sender, TreeViewEventArgs e)
-        {
-            if (configView.SelectedNode is null)
-            {
-                return;
-            }
-
-            if (configView.SelectedNode.Tag is ApplicationNode appNode)
-            {
-                appNode.NodeOpened = e.Node.IsExpanded;
-            }
-
-            if (configView.SelectedNode.Tag is ProtocolNode protocolNode)
-            {
-                protocolNode.NodeOpened = e.Node.IsExpanded;
-            }
-        }
     }
 }

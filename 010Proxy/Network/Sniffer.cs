@@ -49,9 +49,12 @@ namespace _010Proxy.Network
 
         public void StopCapture()
         {
-            _activeDevice.OnPacketArrival -= OnPacketArrival;
-            _activeDevice?.StopCapture();
-            _activeDevice = null;
+            if (_activeDevice != null)
+            {
+                _activeDevice.OnPacketArrival -= OnPacketArrival;
+                _activeDevice.StopCapture();
+                _activeDevice = null;
+            }
         }
 
         public void OnPacketArrival(object sender, CaptureEventArgs e)

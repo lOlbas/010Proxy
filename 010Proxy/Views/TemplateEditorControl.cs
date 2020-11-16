@@ -9,7 +9,7 @@ namespace _010Proxy.Views
 {
     public partial class TemplateEditorControl : ProxyTabControl
     {
-        private TemplateNode _source;
+        private RepositoryNode _source;
         private int _maxLineNumberCharLength;
 
         public TemplateEditorControl()
@@ -44,11 +44,11 @@ namespace _010Proxy.Views
             templateEditor.SetKeywords(1, "bool byte char class const decimal double enum float int long sbyte short static string struct uint ulong ushort void");
         }
 
-        public void LoadTemplate(TemplateNode source)
+        public void LoadTemplate(RepositoryNode source)
         {
             _source = source;
 
-            templateEditor.Text = source.Code;
+            templateEditor.Text = source.Content;
 
             ParentTab.Text = _source.Name;
         }
@@ -58,7 +58,7 @@ namespace _010Proxy.Views
             // Did the number of characters in the line number display change?
             // i.e. nnn VS nn, or nnnn VS nn, etc...
 
-            _source.Code = templateEditor.Text;
+            _source.Content = templateEditor.Text;
             ParentTab.Text = _source.Name + "*";
 
             var maxLineNumberCharLength = templateEditor.Lines.Count.ToString().Length;
@@ -129,6 +129,11 @@ namespace _010Proxy.Views
                 ParentForm.SaveConfig();
                 ParentTab.Text = _source.Name;
 
+                e.SuppressKeyPress = true;
+            }
+
+            if (e.KeyCode == Keys.W && e.Control)
+            {
                 e.SuppressKeyPress = true;
             }
         }

@@ -61,13 +61,11 @@ namespace _010Proxy.Views
                 HandleTcpPacket(tcpPacket, ipPacket, timeVal);
             }
 
-            /*
             // TODO: UDP is not yet supported
             if (ipPacket.Is<UdpPacket>(out var udpPacket))
             {
-                HandleUdpPacket(udpPacket, ipPacket, timeVal);
+                // HandleUdpPacket(udpPacket, ipPacket, timeVal);
             }
-            */
         }
 
         private void HandleTcpPacket(TcpPacket tcpPacket, IPPacket ipPacket, PosixTimeval timeVal)
@@ -84,7 +82,7 @@ namespace _010Proxy.Views
             var type = typeof(TcpPacket);
             var protocolName = "TCP";
 
-            SenderEnum sender = SenderEnum.Unknown;
+            var sender = SenderEnum.Unknown;
 
             IPEndPoint localEndPoint = null, remoteEndPoint = null;
 
@@ -134,7 +132,7 @@ namespace _010Proxy.Views
             {
                 var connectionInfo = _connections.FirstOrDefault(ci => ci.EqualsTo(protocolName, localEndPoint, remoteEndPoint));
 
-                if (connectionInfo is null)
+                if (connectionInfo == null)
                 {
                     connectionInfo = new ConnectionInfo("Unassigned", protocolName, localEndPoint, remoteEndPoint, type);
                     _connections.Add(connectionInfo);
@@ -195,7 +193,7 @@ namespace _010Proxy.Views
 
         protected override void UpdateMenu(bool show = true)
         {
-            var deviceStarted = !(_device is null) && _device.Started;
+            var deviceStarted = _device != null && _device.Started;
 
             ParentForm.startCaptureMenuItem.Enabled = show && !deviceStarted;
             ParentForm.stopCaptureMenuItem.Enabled = show && deviceStarted;

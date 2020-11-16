@@ -102,13 +102,26 @@ namespace _010Proxy.Parsers
                         if (fieldAttribute.IsOpCode)
                         {
                             // opCodes.Add(fieldAttribute.OpCodeIndex, eventData[fieldInfo.Name]);
-                            opCode = eventData[fieldInfo.Name];
+
+                            try
+                            {
+                                // OpCode as described in template might be, for example, of "short" type,
+                                // but if we set "[Event(OpCode=1)]" then typeof(OpCode) will be "int",
+                                // so we have to cast to the expected type or else the lookup will not work.
+                                opCode = Convert.ChangeType(eventData[fieldInfo.Name], fieldInfo.FieldType);
+                            }
+                            catch (Exception)
+                            {
+                                // Fallback to type specified in template, which we can force like this:
+                                // "[Event(OpCode=(short)1)]"
+                                opCode = eventData[fieldInfo.Name];
+                            }
                         }
                     }
                 }
             }
 
-            if (!(opCode is null) && _eventsMap.TryGetValue(opCode, out var eventType))
+            if (opCode != null && _eventsMap.TryGetValue(opCode, out var eventType))
             {
                 var typeFields = eventType.GetFields();
 

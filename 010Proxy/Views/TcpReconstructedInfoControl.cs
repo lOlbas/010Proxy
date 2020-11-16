@@ -99,8 +99,13 @@ namespace _010Proxy.Views
             }
         }
 
-        public void ApplyProtocol(ProtocolNode protocol)
+        public void ApplyProtocol(RepositoryNode repository)
         {
+            if (repository.Type != EntryType.Protocol)
+            {
+                return;
+            }
+
             _templateParser = new TemplateParser();
 
             var compilerParams = new CompilerParameters
@@ -114,7 +119,7 @@ namespace _010Proxy.Views
             compilerParams.ReferencedAssemblies.AddRange(new[] { "System.dll", "mscorlib.dll", "System.Core.dll", Assembly.GetEntryAssembly()?.Location, typeof(ProtoContractAttribute).Assembly.Location });
 
             var provider = new CSharpCodeProvider();
-            var codes = protocol.Templates.Select(template => "using _010Proxy.Templates.Attributes; using _010Proxy.Templates; " + template.Value.Code).ToArray();
+            var codes = repository.GetFiles().Select(template => "using _010Proxy.Templates.Attributes; using _010Proxy.Templates; " + template).ToArray();
 
             var compile = provider.CompileAssemblyFromSource(compilerParams, codes);
 
@@ -138,7 +143,7 @@ namespace _010Proxy.Views
 
         private void ApplyProtocol(int rowIndex)
         {
-            if (_templateParser is null)
+            if (_templateParser == null)
             {
                 return;
             }
@@ -176,7 +181,7 @@ namespace _010Proxy.Views
 
             packetPreview.ByteProvider = new DynamicByteProvider(tcpFlow.FlowData);
 
-            if (!(_templateParser is null) && tcpFlow.FlowData.Count > 0)
+            if (_templateParser != null && tcpFlow.FlowData.Count > 0)
             {
                 var data = _templateParser.Parse(tcpFlow.FlowData);
                 ParentForm.CreateFlowDataPreview(data);
@@ -191,7 +196,7 @@ namespace _010Proxy.Views
 
         public override void OnClose()
         {
-            if (!(_connectionInfo is null))
+            if (_connectionInfo != null)
             {
                 _connectionInfo.OnNewFlow -= OnNewFlow;
                 _connectionInfo.OnFlowUpdate -= OnFlowUpdate;
