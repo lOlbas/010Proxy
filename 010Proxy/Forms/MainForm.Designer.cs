@@ -1,4 +1,6 @@
-﻿namespace _010Proxy.Forms
+﻿using _010Proxy.Types;
+
+namespace _010Proxy.Forms
 {
     partial class MainForm
     {
@@ -39,7 +41,6 @@
             this.protocolMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.applyTemplateMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.contextMenuStrip = new System.Windows.Forms.ContextMenuStrip(this.components);
-            this.configView = new System.Windows.Forms.TreeView();
             this.configImageList = new System.Windows.Forms.ImageList(this.components);
             this.splitter = new System.Windows.Forms.Splitter();
             this.configGroupBox = new System.Windows.Forms.GroupBox();
@@ -47,6 +48,7 @@
             this.flowDataPreviewGroupBox = new System.Windows.Forms.GroupBox();
             this.flowDataView = new System.Windows.Forms.TreeView();
             this.leftPanelSplitter = new System.Windows.Forms.Splitter();
+            this.configView = new System.Windows.Forms.TreeView();
             this.mainMenu.SuspendLayout();
             this.configGroupBox.SuspendLayout();
             this.leftPanel.SuspendLayout();
@@ -137,24 +139,6 @@
             this.contextMenuStrip.Name = "contextMenuStrip";
             this.contextMenuStrip.Size = new System.Drawing.Size(61, 4);
             // 
-            // configView
-            // 
-            this.configView.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.configView.ImageIndex = 0;
-            this.configView.ImageList = this.configImageList;
-            this.configView.Location = new System.Drawing.Point(3, 16);
-            this.configView.Name = "configView";
-            this.configView.SelectedImageIndex = 0;
-            this.configView.Size = new System.Drawing.Size(244, 281);
-            this.configView.TabIndex = 2;
-            this.configView.AfterLabelEdit += new System.Windows.Forms.NodeLabelEditEventHandler(this.configView_AfterLabelEdit);
-            this.configView.AfterCollapse += new System.Windows.Forms.TreeViewEventHandler(this.configView_AfterExpandOrCollapse);
-            this.configView.AfterExpand += new System.Windows.Forms.TreeViewEventHandler(this.configView_AfterExpandOrCollapse);
-            this.configView.NodeMouseClick += new System.Windows.Forms.TreeNodeMouseClickEventHandler(this.configView_NodeMouseClick);
-            this.configView.NodeMouseDoubleClick += new System.Windows.Forms.TreeNodeMouseClickEventHandler(this.configView_NodeMouseDoubleClick);
-            this.configView.MouseClick += new System.Windows.Forms.MouseEventHandler(this.CreateConfigContextMenu);
-            this.configView.MouseDown += new System.Windows.Forms.MouseEventHandler(this.CreateConfigContextMenu);
-            // 
             // configImageList
             // 
             this.configImageList.ColorDepth = System.Windows.Forms.ColorDepth.Depth32Bit;
@@ -220,6 +204,29 @@
             this.leftPanelSplitter.Size = new System.Drawing.Size(250, 3);
             this.leftPanelSplitter.TabIndex = 5;
             this.leftPanelSplitter.TabStop = false;
+            // 
+            // configView
+            // 
+            this.configView.AllowDrop = true;
+            this.configView.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.configView.ImageIndex = 0;
+            this.configView.ImageList = this.configImageList;
+            this.configView.Location = new System.Drawing.Point(3, 16);
+            this.configView.Name = "configView";
+            this.configView.SelectedImageIndex = 0;
+            this.configView.Size = new System.Drawing.Size(244, 281);
+            this.configView.Sorted = true;
+            this.configView.TabIndex = 2;
+            this.configView.AfterLabelEdit += new System.Windows.Forms.NodeLabelEditEventHandler(this.configView_AfterLabelEdit);
+            this.configView.AfterCollapse += new System.Windows.Forms.TreeViewEventHandler(this.configView_AfterExpandOrCollapse);
+            this.configView.AfterExpand += new System.Windows.Forms.TreeViewEventHandler(this.configView_AfterExpandOrCollapse);
+            this.configView.NodeMouseClick += new System.Windows.Forms.TreeNodeMouseClickEventHandler(this.configView_NodeMouseClick);
+            this.configView.NodeMouseDoubleClick += new System.Windows.Forms.TreeNodeMouseClickEventHandler(this.configView_NodeMouseDoubleClick);
+            this.configView.DragDrop += new System.Windows.Forms.DragEventHandler(this.configView_DragDrop);
+            this.configView.DragEnter += new System.Windows.Forms.DragEventHandler(this.configView_DragEnter);
+            this.configView.DragOver += new System.Windows.Forms.DragEventHandler(this.configView_DragOver);
+            this.configView.MouseClick += new System.Windows.Forms.MouseEventHandler(this.CreateConfigContextMenu);
+            this.configView.MouseDown += new System.Windows.Forms.MouseEventHandler(this.CreateConfigContextMenu);
             // 
             // MainForm
             // 

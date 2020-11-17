@@ -114,6 +114,7 @@
     <Compile Include="Types\ProxyConfig.cs" />
     <Compile Include="Utils\Extensions\IPAddressExtensions.cs" />
     <Compile Include="Utils\Extensions\TypeExtensions.cs" />
+    <Compile Include="Utils\FilesImporter.cs" />
     <Compile Include="Utils\IconsExtractor.cs" />
     <Compile Include="Utils\IPUtils.cs" />
     <Compile Include="Utils\Prompt.cs" />

@@ -1,8 +1,11 @@
 ﻿using _010Proxy.Utils;
 using PacketDotNet;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Windows.Forms;
 
 namespace _010Proxy.Types
 {
@@ -23,7 +26,6 @@ namespace _010Proxy.Types
     {
         Protocol,
         Folder,
-        File,
         Template
     }
 
@@ -79,9 +81,9 @@ namespace _010Proxy.Types
             return files;
         }
 
-        public List<string> PathTo()
+        public List<string> Path()
         {
-            var path = new List<string>();
+            var path = new List<string> { Name };
 
             var container = Container;
 
@@ -93,6 +95,32 @@ namespace _010Proxy.Types
             }
 
             return path;
+        }
+
+        public bool TryGetFolder(string folder, out RepositoryNode folderNode)
+        {
+            folderNode = null;
+
+            foreach (var item in Items.Where(item => item.Type == EntryType.Folder && item.Name == folder))
+            {
+                folderNode = item;
+                return true;
+            }
+
+            return false;
+        }
+
+        public bool TryGetFile(string file, out RepositoryNode fileNode)
+        {
+            fileNode = null;
+
+            foreach (var item in Items.Where(item => item.Type == EntryType.Template && item.Name == file))
+            {
+                fileNode = item;
+                return true;
+            }
+
+            return false;
         }
     }
 
@@ -124,6 +152,47 @@ namespace _010Proxy.Types
     {
         public ushort Port;
         public ProtocolType ProtocolType;
+    }
+
+    public class ConfigNodeSorter : IComparer
+    {
+        public ConfigNodeSorter() { }
+
+        public int Compare(object x, object y)
+        {
+            if (!(x is TreeNode tx) || !(y is TreeNode ty))
+            {
+                return 0;
+            }
+
+            if (tx.Tag is RepositoryNode txRepo && ty.Tag is RepositoryNode tyRepo)
+            {
+                if (txRepo.Type != tyRepo.Type)
+                {
+                    return txRepo.Type - tyRepo.Type;
+                }
+            }
+
+            var s1 = tx.Text;
+
+            while (s1.Length > 0 && char.IsDigit(s1.Last()))
+            {
+                s1 = s1.TrimEnd(s1.Last());
+            }
+
+            s1 += tx.Text.Substring(s1.Length).PadLeft(12, '0');
+
+            var s2 = tx.Text;
+
+            while (s2.Length > 0 && char.IsDigit(s2.Last()))
+            {
+                s2 = s2.TrimEnd(s2.Last());
+            }
+
+            s2 += ty.Text.Substring(s2.Length).PadLeft(12, '0');
+
+            return string.CompareOrdinal(s1, s2);
+        }
     }
 
     public class ConfigManager : Singleton<ConfigManager>

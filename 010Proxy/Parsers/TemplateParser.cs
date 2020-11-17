@@ -112,7 +112,7 @@ namespace _010Proxy.Parsers
                             }
                             catch (Exception)
                             {
-                                // Fallback to type specified in template, which we can force like this:
+                                // Fallback to type specified in template, which we can forced like this:
                                 // "[Event(OpCode=(short)1)]"
                                 opCode = eventData[fieldInfo.Name];
                             }

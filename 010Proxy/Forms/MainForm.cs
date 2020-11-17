@@ -5,6 +5,8 @@ using _010Proxy.Views;
 using SharpPcap;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Windows.Forms;
@@ -378,6 +380,10 @@ namespace _010Proxy.Forms
             {
                 e.Node.EndEdit(true);
             }
+
+            configView.LabelEdit = false;
+
+            configView.BeginInvoke(new MethodInvoker(configView.Sort));
         }
 
         #endregion
@@ -498,7 +504,7 @@ namespace _010Proxy.Forms
                 if (name != "")
                 {
                     var template =
-$@"namespace {string.Join(".", repository.PathTo().ToArray())}
+$@"namespace {string.Join(".", repository.Path().ToArray())}
 {{
     [RootPacket]
     public class {name} : IRootTemplate
@@ -513,6 +519,7 @@ $@"namespace {string.Join(".", repository.PathTo().ToArray())}
 
                     configView.SelectedNode.Nodes.Add(newNode);
                     configView.SelectedNode = newNode;
+                    configView.Sort();
 
                     _configManager.Save();
 
@@ -530,7 +537,7 @@ $@"namespace {string.Join(".", repository.PathTo().ToArray())}
                 if (name != "")
                 {
                     var template =
-$@"namespace {string.Join(".", repository.PathTo().ToArray())}
+$@"namespace {string.Join(".", repository.Path().ToArray())}
 {{
     public class {name}
     {{
@@ -544,6 +551,7 @@ $@"namespace {string.Join(".", repository.PathTo().ToArray())}
 
                     configView.SelectedNode.Nodes.Add(newNode);
                     configView.SelectedNode = newNode;
+                    configView.Sort();
 
                     _configManager.Save();
 
@@ -596,36 +604,6 @@ $@"namespace {string.Join(".", repository.PathTo().ToArray())}
             {
                 configView.LabelEdit = true;
                 configView.SelectedNode.BeginEdit();
-
-                /*
-                var name = "";
-
-                if (configNode is ApplicationNode)
-                {
-                    name = Prompt.ShowDialog("New application name:", $"Rename application \"{configNode.Name}\"");
-                }
-
-                if (configNode is IPNode)
-                {
-                    name = Prompt.ShowDialog("New IP name:", $"Rename IP \"{configNode.Name}\"");
-                }
-
-                if (configNode is ProtocolNode)
-                {
-                    name = Prompt.ShowDialog("New protocol name:", $"Rename protocol \"{configNode.Name}\"");
-                }
-
-                if (configNode is TemplateNode)
-                {
-                    name = Prompt.ShowDialog("New template name:", $"Rename template \"{configNode.Name}\"");
-                }
-
-                if (name != "")
-                {
-                    configNode.Name = name;
-
-                    _configManager.Save();
-                }*/
             }
         }
 
@@ -681,6 +659,85 @@ $@"namespace {string.Join(".", repository.PathTo().ToArray())}
                 if (tabControl.SelectedTab.Controls[0] is TcpReconstructedInfoControl control)
                 {
                     control.ApplyProtocol(repositoryNode);
+                }
+            }
+        }
+
+        #endregion
+
+        #region Config View Drag & Drop
+
+        private void configView_DragEnter(object sender, DragEventArgs e)
+        {
+            e.Effect = DragDropEffects.Move;
+        }
+
+        private void configView_DragOver(object sender, DragEventArgs e)
+        {
+            configView.SelectedNode = configView.GetNodeAt(configView.PointToClient(new Point(e.X, e.Y)));
+        }
+
+        private void configView_DragDrop(object sender, DragEventArgs e)
+        {
+            var targetNode = configView.GetNodeAt(configView.PointToClient(new Point(e.X, e.Y)));
+            var files = (string[])e.Data.GetData(DataFormats.FileDrop);
+
+            if (files != null && files.Length > 0)
+            {
+                if (targetNode.Tag is RepositoryNode repositoryNode)
+                {
+                    var tree = FilesImporter.FilesToTree(files, repositoryNode);
+
+                    var action = OverwriteAction.OverwriteAll;
+
+                    if (tree.TotalConflicts > 0)
+                    {
+                        // TODO: ask user to either overwrite all, skip all or prompt every file on conflict. Current default is OverwriteAll
+                        // action = Prompt....();
+                    }
+
+                    ImportTreeToConfig(tree, repositoryNode, action);
+
+                    _configManager.Save();
+                    LoadConfig();
+                }
+            }
+        }
+
+        private void ImportTreeToConfig(ImportNode tree, RepositoryNode target, OverwriteAction action)
+        {
+            foreach (var entry in tree.SubNodes)
+            {
+                if (entry.Type == EntryType.Folder)
+                {
+                    if (!target.TryGetFolder(entry.Name, out var folderNode))
+                    {
+                        folderNode = target.AddItem(EntryType.Folder, entry.Name);
+                    }
+
+                    ImportTreeToConfig(entry, folderNode, action);
+                } else if (entry.Type == EntryType.Template)
+                {
+                    if (target.TryGetFile(entry.Name, out var fileNode))
+                    {
+                        switch (action)
+                        {
+                            case OverwriteAction.OverwriteAll:
+                                fileNode.Content = File.ReadAllText(entry.Path);
+                                break;
+
+                            case OverwriteAction.SkipAll:
+                                break;
+
+                            case OverwriteAction.PromptEvery:
+                                // TODO: prompt user for file overwriting
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        target.AddItem(EntryType.Template, entry.Name, File.ReadAllText(entry.Path));
+                    }
                 }
             }
         }
