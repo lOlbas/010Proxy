@@ -2,17 +2,20 @@
 
 namespace _010Proxy.Templates.Attributes
 {
-    [AttributeUsage(AttributeTargets.Class)]
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
     public sealed class EventAttribute : Attribute
     {
         public object OpCode { get; set; }
 
         public object OpCodeIndex { get; set; }
 
-        public EventAttribute(object opCode = null, ushort opCodeIndex = 1)
+        public string SourceField { get; set; }
+
+        public EventAttribute(object opCode = null, string sourceField = null)
         {
             OpCode = opCode;
-            OpCodeIndex = opCodeIndex;
+            OpCodeIndex = 1;
+            SourceField = sourceField;
         }
     }
 }

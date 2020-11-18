@@ -9,12 +9,15 @@ namespace _010Proxy.Templates.Attributes
 
         public ushort OpCodeIndex { get; set; }
 
-        public string CountField { get; set; }
+        public string SizeField { get; set; }
 
-        public FieldAttribute(bool isOpCode = false, string countField = null)
+        public string ForOpCode { get; set; }
+
+        public FieldAttribute(bool isOpCode = false, string sizeField = null, string forOpCode = null)
         {
             IsOpCode = isOpCode;
-            CountField = countField;
+            SizeField = sizeField;
+            ForOpCode = forOpCode;
         }
     }
 }

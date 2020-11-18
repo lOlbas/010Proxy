@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Windows.Forms;
 
 namespace _010Proxy.Views
@@ -24,6 +25,8 @@ namespace _010Proxy.Views
         public CaptureTrafficControl()
         {
             InitializeComponent();
+
+            typeof(DataGridView).InvokeMember("DoubleBuffered", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty, null, dataGridView, new object[] { true });
         }
 
         public void StartNetworkAnalysis(ICaptureDevice device)

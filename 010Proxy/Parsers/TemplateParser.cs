@@ -8,6 +8,14 @@ using System.Reflection;
 
 namespace _010Proxy.Parsers
 {
+    public struct FieldMeta
+    {
+        public string Name;
+        public object Value;
+        public long Offset;
+        public long Length;
+    }
+
     public sealed class TemplateParser
     {
         private BinaryReader _br;
@@ -37,11 +45,6 @@ namespace _010Proxy.Parsers
             {typeof(ulong), "ReadUInt64"},
         };
 
-        public TemplateParser()
-        {
-
-        }
-
         public bool ParseAssembly(Assembly assembly)
         {
             _assembly = assembly;
@@ -55,7 +58,9 @@ namespace _010Proxy.Parsers
                         _rootEvents.Add(type);
                     }
 
-                    if (type.GetCustomAttributes(typeof(EventAttribute), false).FirstOrDefault() is EventAttribute attribute)
+                    var eventAttributes = type.GetCustomAttributes(typeof(EventAttribute), false);
+
+                    foreach (EventAttribute attribute in eventAttributes)
                     {
                         _eventsMap.Add(attribute.OpCode, type);
                     }
@@ -88,50 +93,107 @@ namespace _010Proxy.Parsers
 
             // TODO: support for multi-step opcodes
             // var opCodes = new Dictionary<ushort, object>();
-            object opCode = null;
+            var packetIndex = 0;
 
-            foreach (var rootEventType in _rootEvents)
+            while (_br.BaseStream.Position < _br.BaseStream.Length)
             {
-                foreach (var fieldInfo in rootEventType.GetFields())
-                {
-                    //if (fieldInfo.FieldType.HasAttribute<FieldAttribute>(out var fieldAttribute))
-                    if (fieldInfo.GetCustomAttributes(typeof(FieldAttribute), false).FirstOrDefault() is FieldAttribute fieldAttribute)
-                    {
-                        eventData.Add(fieldInfo.Name, ParseField(fieldInfo, fieldAttribute, ref eventData));
+                object opCode = null;
+                var packetData = new Dictionary<object, object>();
 
-                        if (fieldAttribute.IsOpCode)
+                foreach (var rootEventType in _rootEvents)
+                {
+                    try
+                    {
+                        var opCodeDataMeta = new FieldMeta();
+
+                        foreach (var fieldInfo in rootEventType.GetFields())
                         {
-                            // opCodes.Add(fieldAttribute.OpCodeIndex, eventData[fieldInfo.Name]);
+                            //if (fieldInfo.FieldType.HasAttribute<FieldAttribute>(out var fieldAttribute))
+                            if (fieldInfo.GetCustomAttributes(typeof(FieldAttribute), false).FirstOrDefault() is FieldAttribute fieldAttribute)
+                            {
+                                var fieldMeta = new FieldMeta
+                                {
+                                    Name = fieldInfo.Name,
+                                    Offset = _br.BaseStream.Position,
+                                    Value = ParseField(fieldInfo, fieldAttribute, ref packetData),
+                                };
+
+                                fieldMeta.Length = _br.BaseStream.Position - fieldMeta.Offset;
+                                packetData.Add(fieldInfo.Name, fieldMeta);
+
+                                if (fieldAttribute.IsOpCode)
+                                {
+                                    // opCodes.Add(fieldAttribute.OpCodeIndex, eventData[fieldInfo.Name]);
+
+                                    try
+                                    {
+                                        // OpCode as described in template might be, for example, of "short" type,
+                                        // but if we set "[Event(OpCode=1)]" then typeof(OpCode) will be "int",
+                                        // so we have to cast to the expected type or else the lookup will not work.
+                                        opCode = Convert.ChangeType(fieldMeta.Value, fieldInfo.FieldType);
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        // Fallback to type specified in template, which we can be forced like this:
+                                        // "[Event(OpCode=(short)1)]"
+                                        opCode = fieldMeta.Value;
+                                    }
+                                } else if (fieldAttribute.ForOpCode != null)
+                                {
+                                    opCodeDataMeta = fieldMeta;
+                                }
+                            }
+                        }
+
+                        if (opCode != null && _eventsMap.TryGetValue(opCode, out var eventType))
+                        {
+                            var typeFields = eventType.GetFields();
+
+                            if (opCodeDataMeta.Length != 0)
+                            {
+                                _br.BaseStream.Position = opCodeDataMeta.Offset;
+                            }
 
                             try
                             {
-                                // OpCode as described in template might be, for example, of "short" type,
-                                // but if we set "[Event(OpCode=1)]" then typeof(OpCode) will be "int",
-                                // so we have to cast to the expected type or else the lookup will not work.
-                                opCode = Convert.ChangeType(eventData[fieldInfo.Name], fieldInfo.FieldType);
+                                foreach (var fieldInfo in typeFields)
+                                {
+                                    if (fieldInfo.GetCustomAttributes(typeof(FieldAttribute), false).FirstOrDefault() is FieldAttribute fieldAttribute)
+                                    {
+                                        var fieldMeta = new FieldMeta
+                                        {
+                                            Name = fieldInfo.Name,
+                                            Offset = _br.BaseStream.Position,
+                                            Value = ParseField(fieldInfo, fieldAttribute, ref packetData),
+                                        };
+
+                                        fieldMeta.Length = _br.BaseStream.Position - fieldMeta.Offset;
+                                        packetData.Add(fieldInfo.Name, fieldMeta);
+                                    }
+                                }
                             }
-                            catch (Exception)
+                            catch (Exception e)
                             {
-                                // Fallback to type specified in template, which we can forced like this:
-                                // "[Event(OpCode=(short)1)]"
-                                opCode = eventData[fieldInfo.Name];
+                                _br.BaseStream.Position = opCodeDataMeta.Offset + opCodeDataMeta.Length;
                             }
                         }
+
+                        // Parsing successful
+                        break;
+                    }
+                    catch (Exception e)
+                    {
+                        // Parsing failed, try next root template
+                        continue;
                     }
                 }
+
+                eventData.Add($"Packet #{++packetIndex}", packetData);
             }
 
-            if (opCode != null && _eventsMap.TryGetValue(opCode, out var eventType))
+            if (packetIndex == 1)
             {
-                var typeFields = eventType.GetFields();
-
-                foreach (var fieldInfo in typeFields)
-                {
-                    if (fieldInfo.GetCustomAttributes(typeof(FieldAttribute), false).FirstOrDefault() is FieldAttribute fieldAttribute)
-                    {
-                        eventData.Add(fieldInfo.Name, ParseField(fieldInfo, fieldAttribute, ref eventData));
-                    }
-                }
+                return eventData.First().Value as Dictionary<object, object>;
             }
 
             return eventData;
@@ -144,21 +206,49 @@ namespace _010Proxy.Parsers
                 return typeof(BinaryReader).GetMethod(methodName)?.Invoke(_br, new object[] { });
             }
 
-            // TODO: support arrays
-            if (fieldInfo.FieldType == typeof(byte[])) // fieldInfo.FieldType.IsArray
+            if (fieldInfo.FieldType.IsArray)
             {
-                if (attribute.CountField == null)
+                if (attribute.SizeField == null)
                 {
                     throw new Exception("CountField is missing for byte array.");
                 }
 
-                if (state.TryGetValue(attribute.CountField, out var value))
+                if (state.TryGetValue(attribute.SizeField, out var fieldMeta))
                 {
-                    return _br.ReadBytes(Convert.ToInt32(value));
+                    var arrayType = fieldInfo.FieldType.GetElementType();
+
+                    if (_basicTypesParsers.TryGetValue(arrayType, out var arrayMethodName))
+                    {
+                        var readMethod = typeof(BinaryReader).GetMethod(arrayMethodName);
+                        dynamic size = ((FieldMeta) fieldMeta).Value; // We assume this is number
+                        var arrayValues = Array.CreateInstance(arrayType, size);
+
+                        for (var i = 0; i < size; i++)
+                        {
+                            dynamic value = readMethod?.Invoke(_br, new object[] { });
+                            arrayValues[i] = value;
+                        }
+
+                        return arrayValues;
+                    }
                 }
 
-                throw new Exception("CountField is not");
+                throw new Exception("CountField is not parsed yet, can't use it.");
             }
+
+            // TODO: support generic collections
+
+            if (fieldInfo.FieldType.IsEnum)
+            {
+                if (_basicTypesParsers.TryGetValue(Enum.GetUnderlyingType(fieldInfo.FieldType), out var enumMethodName))
+                {
+                    var numericValue = typeof(BinaryReader).GetMethod(enumMethodName)?.Invoke(_br, new object[] { });
+
+                    return Enum.ToObject(fieldInfo.FieldType, numericValue);
+                }
+            }
+
+            // TODO: support array of class
 
             if (fieldInfo.FieldType.IsClass)
             {
@@ -180,12 +270,12 @@ namespace _010Proxy.Parsers
             //if (classType.HasAttribute<ProtoContractAttribute>(out var protoContractAttribute))
             if (classType.GetCustomAttributes(typeof(ProtoContractAttribute), false).FirstOrDefault() is ProtoContractAttribute protoContractAttribute)
             {
-                if (attribute.CountField == null)
+                if (attribute.SizeField == null)
                 {
                     throw new Exception("CountField is missing for ProtoContract.");
                 }
 
-                var protoLength = state[attribute.CountField];
+                var protoLength = state[attribute.SizeField];
                 var method = typeof(Serializer).GetMethods().FirstOrDefault(m => m.Name == "Deserialize" && m.GetParameters().Length == 4);
                 var genericMethod = method?.MakeGenericMethod(classType);
 

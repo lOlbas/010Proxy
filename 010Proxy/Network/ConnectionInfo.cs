@@ -73,10 +73,10 @@ namespace _010Proxy.Network
             switch (timedPacket.Sender)
             {
                 case SenderEnum.Client:
-                    tcpFlow = Flows.Find((flow) => flow.InitialAck == timedPacket.Packet.AcknowledgmentNumber);
+                    tcpFlow = Flows.Find((flow) => flow.InitialSeq == timedPacket.Packet.SequenceNumber);
                     break;
                 case SenderEnum.Server:
-                    tcpFlow = Flows.Find((flow) => flow.InitialSeq == timedPacket.Packet.SequenceNumber);
+                    tcpFlow = Flows.Find((flow) => flow.InitialAck == timedPacket.Packet.AcknowledgmentNumber);
                     break;
             }
 

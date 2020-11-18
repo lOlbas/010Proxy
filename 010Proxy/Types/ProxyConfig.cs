@@ -81,7 +81,7 @@ namespace _010Proxy.Types
             return files;
         }
 
-        public List<string> Path()
+        public List<string> GetNamespace()
         {
             var path = new List<string> { Name };
 
@@ -121,6 +121,28 @@ namespace _010Proxy.Types
             }
 
             return false;
+        }
+
+        public void ExportTo(string path)
+        {
+            if (Type == EntryType.Folder || Type == EntryType.Protocol)
+            {
+                var dirInfo = Directory.CreateDirectory(Path.Combine(path, Name));
+
+                foreach (var item in Items)
+                {
+                    item.ExportTo(dirInfo.FullName);
+                }
+            }
+            else if (Type == EntryType.Template)
+            {
+                if (File.Exists(path))
+                {
+                    // TODO: handle overwriting
+                }
+
+                File.WriteAllText(Path.Combine(path, Name) + ".cs", Content);
+            }
         }
     }
 
@@ -173,25 +195,7 @@ namespace _010Proxy.Types
                 }
             }
 
-            var s1 = tx.Text;
-
-            while (s1.Length > 0 && char.IsDigit(s1.Last()))
-            {
-                s1 = s1.TrimEnd(s1.Last());
-            }
-
-            s1 += tx.Text.Substring(s1.Length).PadLeft(12, '0');
-
-            var s2 = tx.Text;
-
-            while (s2.Length > 0 && char.IsDigit(s2.Last()))
-            {
-                s2 = s2.TrimEnd(s2.Last());
-            }
-
-            s2 += ty.Text.Substring(s2.Length).PadLeft(12, '0');
-
-            return string.CompareOrdinal(s1, s2);
+            return string.CompareOrdinal(tx.Text, ty.Text);
         }
     }
 

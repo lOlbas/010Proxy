@@ -44,11 +44,11 @@ namespace _010Proxy.Forms
             this.configImageList = new System.Windows.Forms.ImageList(this.components);
             this.splitter = new System.Windows.Forms.Splitter();
             this.configGroupBox = new System.Windows.Forms.GroupBox();
+            this.configView = new System.Windows.Forms.TreeView();
             this.leftPanel = new System.Windows.Forms.Panel();
             this.flowDataPreviewGroupBox = new System.Windows.Forms.GroupBox();
             this.flowDataView = new System.Windows.Forms.TreeView();
             this.leftPanelSplitter = new System.Windows.Forms.Splitter();
-            this.configView = new System.Windows.Forms.TreeView();
             this.mainMenu.SuspendLayout();
             this.configGroupBox.SuspendLayout();
             this.leftPanel.SuspendLayout();
@@ -61,7 +61,7 @@ namespace _010Proxy.Forms
             this.tabControl.Location = new System.Drawing.Point(250, 24);
             this.tabControl.Name = "tabControl";
             this.tabControl.SelectedIndex = 0;
-            this.tabControl.Size = new System.Drawing.Size(831, 612);
+            this.tabControl.Size = new System.Drawing.Size(1048, 823);
             this.tabControl.TabIndex = 0;
             this.tabControl.SelectedIndexChanged += new System.EventHandler(this.tabControl_SelectedIndexChanged);
             this.tabControl.Deselecting += new System.Windows.Forms.TabControlCancelEventHandler(this.tabControl_Deselecting);
@@ -74,7 +74,7 @@ namespace _010Proxy.Forms
             this.protocolMenuItem});
             this.mainMenu.Location = new System.Drawing.Point(0, 0);
             this.mainMenu.Name = "mainMenu";
-            this.mainMenu.Size = new System.Drawing.Size(1081, 24);
+            this.mainMenu.Size = new System.Drawing.Size(1298, 24);
             this.mainMenu.TabIndex = 1;
             this.mainMenu.Text = "menuStrip1";
             // 
@@ -149,7 +149,7 @@ namespace _010Proxy.Forms
             // 
             this.splitter.Location = new System.Drawing.Point(250, 24);
             this.splitter.Name = "splitter";
-            this.splitter.Size = new System.Drawing.Size(3, 612);
+            this.splitter.Size = new System.Drawing.Size(3, 823);
             this.splitter.TabIndex = 3;
             this.splitter.TabStop = false;
             // 
@@ -159,10 +159,35 @@ namespace _010Proxy.Forms
             this.configGroupBox.Dock = System.Windows.Forms.DockStyle.Top;
             this.configGroupBox.Location = new System.Drawing.Point(0, 0);
             this.configGroupBox.Name = "configGroupBox";
-            this.configGroupBox.Size = new System.Drawing.Size(250, 300);
+            this.configGroupBox.Size = new System.Drawing.Size(250, 500);
             this.configGroupBox.TabIndex = 4;
             this.configGroupBox.TabStop = false;
             this.configGroupBox.Text = "Configuration";
+            // 
+            // configView
+            // 
+            this.configView.AllowDrop = true;
+            this.configView.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.configView.ImageIndex = 0;
+            this.configView.ImageList = this.configImageList;
+            this.configView.Location = new System.Drawing.Point(3, 16);
+            this.configView.Name = "configView";
+            this.configView.SelectedImageIndex = 0;
+            this.configView.Size = new System.Drawing.Size(244, 481);
+            this.configView.Sorted = true;
+            this.configView.TabIndex = 2;
+            this.configView.AfterLabelEdit += new System.Windows.Forms.NodeLabelEditEventHandler(this.configView_AfterLabelEdit);
+            this.configView.AfterCollapse += new System.Windows.Forms.TreeViewEventHandler(this.configView_AfterExpandOrCollapse);
+            this.configView.AfterExpand += new System.Windows.Forms.TreeViewEventHandler(this.configView_AfterExpandOrCollapse);
+            this.configView.ItemDrag += new System.Windows.Forms.ItemDragEventHandler(this.configView_ItemDrag);
+            this.configView.NodeMouseClick += new System.Windows.Forms.TreeNodeMouseClickEventHandler(this.configView_NodeMouseClick);
+            this.configView.NodeMouseDoubleClick += new System.Windows.Forms.TreeNodeMouseClickEventHandler(this.configView_NodeMouseDoubleClick);
+            this.configView.DragDrop += new System.Windows.Forms.DragEventHandler(this.configView_DragDrop);
+            this.configView.DragEnter += new System.Windows.Forms.DragEventHandler(this.configView_DragEnter);
+            this.configView.DragOver += new System.Windows.Forms.DragEventHandler(this.configView_DragOver);
+            this.configView.KeyDown += new System.Windows.Forms.KeyEventHandler(this.configView_KeyDown);
+            this.configView.MouseClick += new System.Windows.Forms.MouseEventHandler(this.CreateConfigContextMenu);
+            this.configView.MouseDown += new System.Windows.Forms.MouseEventHandler(this.CreateConfigContextMenu);
             // 
             // leftPanel
             // 
@@ -172,16 +197,16 @@ namespace _010Proxy.Forms
             this.leftPanel.Dock = System.Windows.Forms.DockStyle.Left;
             this.leftPanel.Location = new System.Drawing.Point(0, 24);
             this.leftPanel.Name = "leftPanel";
-            this.leftPanel.Size = new System.Drawing.Size(250, 612);
+            this.leftPanel.Size = new System.Drawing.Size(250, 823);
             this.leftPanel.TabIndex = 4;
             // 
             // flowDataPreviewGroupBox
             // 
             this.flowDataPreviewGroupBox.Controls.Add(this.flowDataView);
             this.flowDataPreviewGroupBox.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.flowDataPreviewGroupBox.Location = new System.Drawing.Point(0, 303);
+            this.flowDataPreviewGroupBox.Location = new System.Drawing.Point(0, 503);
             this.flowDataPreviewGroupBox.Name = "flowDataPreviewGroupBox";
-            this.flowDataPreviewGroupBox.Size = new System.Drawing.Size(250, 309);
+            this.flowDataPreviewGroupBox.Size = new System.Drawing.Size(250, 320);
             this.flowDataPreviewGroupBox.TabIndex = 6;
             this.flowDataPreviewGroupBox.TabStop = false;
             this.flowDataPreviewGroupBox.Text = "Flow Data Preview";
@@ -193,46 +218,24 @@ namespace _010Proxy.Forms
             this.flowDataView.ItemHeight = 20;
             this.flowDataView.Location = new System.Drawing.Point(3, 16);
             this.flowDataView.Name = "flowDataView";
-            this.flowDataView.Size = new System.Drawing.Size(244, 290);
+            this.flowDataView.Size = new System.Drawing.Size(244, 301);
             this.flowDataView.TabIndex = 0;
+            this.flowDataView.NodeMouseClick += new System.Windows.Forms.TreeNodeMouseClickEventHandler(this.flowDataView_NodeMouseClick);
             // 
             // leftPanelSplitter
             // 
             this.leftPanelSplitter.Dock = System.Windows.Forms.DockStyle.Top;
-            this.leftPanelSplitter.Location = new System.Drawing.Point(0, 300);
+            this.leftPanelSplitter.Location = new System.Drawing.Point(0, 500);
             this.leftPanelSplitter.Name = "leftPanelSplitter";
             this.leftPanelSplitter.Size = new System.Drawing.Size(250, 3);
             this.leftPanelSplitter.TabIndex = 5;
             this.leftPanelSplitter.TabStop = false;
             // 
-            // configView
-            // 
-            this.configView.AllowDrop = true;
-            this.configView.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.configView.ImageIndex = 0;
-            this.configView.ImageList = this.configImageList;
-            this.configView.Location = new System.Drawing.Point(3, 16);
-            this.configView.Name = "configView";
-            this.configView.SelectedImageIndex = 0;
-            this.configView.Size = new System.Drawing.Size(244, 281);
-            this.configView.Sorted = true;
-            this.configView.TabIndex = 2;
-            this.configView.AfterLabelEdit += new System.Windows.Forms.NodeLabelEditEventHandler(this.configView_AfterLabelEdit);
-            this.configView.AfterCollapse += new System.Windows.Forms.TreeViewEventHandler(this.configView_AfterExpandOrCollapse);
-            this.configView.AfterExpand += new System.Windows.Forms.TreeViewEventHandler(this.configView_AfterExpandOrCollapse);
-            this.configView.NodeMouseClick += new System.Windows.Forms.TreeNodeMouseClickEventHandler(this.configView_NodeMouseClick);
-            this.configView.NodeMouseDoubleClick += new System.Windows.Forms.TreeNodeMouseClickEventHandler(this.configView_NodeMouseDoubleClick);
-            this.configView.DragDrop += new System.Windows.Forms.DragEventHandler(this.configView_DragDrop);
-            this.configView.DragEnter += new System.Windows.Forms.DragEventHandler(this.configView_DragEnter);
-            this.configView.DragOver += new System.Windows.Forms.DragEventHandler(this.configView_DragOver);
-            this.configView.MouseClick += new System.Windows.Forms.MouseEventHandler(this.CreateConfigContextMenu);
-            this.configView.MouseDown += new System.Windows.Forms.MouseEventHandler(this.CreateConfigContextMenu);
-            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1081, 636);
+            this.ClientSize = new System.Drawing.Size(1298, 847);
             this.Controls.Add(this.splitter);
             this.Controls.Add(this.tabControl);
             this.Controls.Add(this.leftPanel);

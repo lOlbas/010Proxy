@@ -11,6 +11,7 @@ using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace _010Proxy.Views
@@ -38,6 +39,8 @@ namespace _010Proxy.Views
         public TcpReconstructedInfoControl()
         {
             InitializeComponent();
+
+            typeof(DataGridView).InvokeMember("DoubleBuffered", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty, null, packetsTable, new object[] { true });
         }
 
         public void LoadFlows(ConnectionInfo connectionInfo)
@@ -65,7 +68,7 @@ namespace _010Proxy.Views
 
                 packetsTable.Rows[rowIndex].Tag = tcpFlow;
 
-                ApplyProtocol(rowIndex);
+                ApplyProtocolOnFlow(rowIndex);
 
                 if (_stickToBottom)
                 {
@@ -91,7 +94,7 @@ namespace _010Proxy.Views
                         packetsTable.Rows[i].Cells[4].Value = tcpFlow.PacketsInfo.Count;
                         packetsTable.Rows[i].Cells[5].Value = tcpFlow.FlowData.Count;
 
-                        ApplyProtocol(i);
+                        ApplyProtocolOnFlow(i);
                     }
 
                     break;
@@ -100,6 +103,11 @@ namespace _010Proxy.Views
         }
 
         public void ApplyProtocol(RepositoryNode repository)
+        {
+            Task.Factory.StartNew(() => ApplyProtocolThreaded(repository));
+        }
+
+        private void ApplyProtocolThreaded(RepositoryNode repository)
         {
             if (repository.Type != EntryType.Protocol)
             {
@@ -137,11 +145,16 @@ namespace _010Proxy.Views
 
             for (var i = 0; i < rowsCount; i++)
             {
-                ApplyProtocol(i);
+                ApplyProtocolOnFlow(i);
+            }
+
+            if (packetsTable.CurrentCell != null)
+            {
+                PreviewFlow(_connectionInfo.Flows[(int)packetsTable.Rows[packetsTable.CurrentCell.RowIndex].Cells[1].Value - 1]);
             }
         }
 
-        private void ApplyProtocol(int rowIndex)
+        private void ApplyProtocolOnFlow(int rowIndex)
         {
             if (_templateParser == null)
             {
@@ -158,13 +171,11 @@ namespace _010Proxy.Views
                 var tcpFlow = (TcpFlow)packetsTable.Rows[rowIndex].Tag;
 
                 if (tcpFlow.FlowData.Count > 0)
-                //foreach (var type in _rootTemplates)
                 {
                     try
                     {
                         tcpFlow.Data = _templateParser.Parse(tcpFlow.FlowData);
                         packetsTable.Rows[rowIndex].Cells[6].Value = "";
-                        //break;
                     }
                     catch (Exception e)
                     {
@@ -174,17 +185,33 @@ namespace _010Proxy.Views
             }
         }
 
-        private void packetsTable_SelectionChanged(object sender, System.EventArgs e)
+        public void HighlightFieldPreview(FieldMeta fieldMeta)
+        {
+            packetPreview.Select(fieldMeta.Offset, fieldMeta.Length);
+        }
+
+        private void packetsTable_SelectionChanged(object sender, EventArgs e)
         {
             var flowIndex = (int)packetsTable.Rows[packetsTable.CurrentCell.RowIndex].Cells[1].Value;
-            var tcpFlow = _connectionInfo.Flows[flowIndex - 1];
+            PreviewFlow(_connectionInfo.Flows[flowIndex - 1]);
+        }
 
-            packetPreview.ByteProvider = new DynamicByteProvider(tcpFlow.FlowData);
+        private void PreviewFlow(TcpFlow tcpFlow)
+        {
+            packetPreview.Invoke((MethodInvoker)delegate
+            {
+                packetPreview.ByteProvider = new DynamicByteProvider(tcpFlow.FlowData);
+            });
+            // ParentForm.PreviewFlowData(tcpFlow.Data);
 
+            // TODO: for debugging only, normally the data show be already parsed
             if (_templateParser != null && tcpFlow.FlowData.Count > 0)
             {
                 var data = _templateParser.Parse(tcpFlow.FlowData);
-                ParentForm.CreateFlowDataPreview(data);
+                ParentForm.Invoke((MethodInvoker)delegate
+               {
+                   ParentForm.PreviewFlowData(data);
+               });
             }
         }
 

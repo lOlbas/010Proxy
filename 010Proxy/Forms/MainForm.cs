@@ -1,7 +1,9 @@
 ﻿using _010Proxy.Network;
+using _010Proxy.Parsers;
 using _010Proxy.Types;
 using _010Proxy.Utils;
 using _010Proxy.Views;
+using Microsoft.WindowsAPICodePack.Dialogs;
 using SharpPcap;
 using System;
 using System.Collections.Generic;
@@ -22,6 +24,8 @@ namespace _010Proxy.Forms
         public MainForm()
         {
             InitializeComponent();
+
+            configView.TreeViewNodeSorter = new ConfigNodeSorter();
 
             Sniffer = new Sniffer();
             _configManager = ConfigManager.Instance;
@@ -236,7 +240,7 @@ namespace _010Proxy.Forms
             CreateConnectionFlowTab(connectionInfo);
         }
 
-        public void CreateFlowDataPreview(Dictionary<object, object> data)
+        public void PreviewFlowData(Dictionary<object, object> data)
         {
             flowDataView.Nodes.Clear();
 
@@ -262,6 +266,7 @@ namespace _010Proxy.Forms
                 if (item.Value is Dictionary<object, object> childData)
                 {
                     newNode = new TreeNode($"{item.Key}");
+
                     foreach (var node in DictionaryToTreeViewNodes(childData))
                     {
                         newNode.Nodes.Add(node);
@@ -286,7 +291,7 @@ namespace _010Proxy.Forms
                 }
                 else
                 {
-                    newNode = new TreeNode($"{item.Key} = {item.Value}");
+                    newNode = new TreeNode($"{item.Key} = {((FieldMeta)item.Value).Value}") { Tag = item.Value };
                 }
 
                 newNode.Expand();
@@ -384,6 +389,9 @@ namespace _010Proxy.Forms
             configView.LabelEdit = false;
 
             configView.BeginInvoke(new MethodInvoker(configView.Sort));
+
+            // TODO: seems to have no effect
+            configView.SelectedNode = e.Node;
         }
 
         #endregion
@@ -431,6 +439,7 @@ namespace _010Proxy.Forms
                             case EntryType.Protocol:
                                 contextMenuStrip.Items.Add(new ToolStripMenuItem("Add", null, new ToolStripItem[]
                                 {
+                                    new ToolStripMenuItem("New Empty Template", null, OnNewEmptyTemplateMenuClick),
                                     new ToolStripMenuItem("New Template", null, OnNewTemplateMenuClick),
                                     new ToolStripMenuItem("New Root Template", null, OnCreateRootTemplateMenuClick),
                                     new ToolStripMenuItem("New Folder", null, OnNewFolderMenuClick)
@@ -443,6 +452,7 @@ namespace _010Proxy.Forms
                             case EntryType.Folder:
                                 contextMenuStrip.Items.Add(new ToolStripMenuItem("Add", null, new ToolStripItem[]
                                 {
+                                    new ToolStripMenuItem("New Empty Template", null, OnNewEmptyTemplateMenuClick),
                                     new ToolStripMenuItem("New Template", null, OnNewTemplateMenuClick),
                                     new ToolStripMenuItem("New Root Template", null, OnCreateRootTemplateMenuClick),
                                     new ToolStripMenuItem("New Folder", null, OnNewFolderMenuClick),
@@ -453,6 +463,9 @@ namespace _010Proxy.Forms
                                 contextMenuStrip.Items.Add(new ToolStripMenuItem("Open", null, OnOpenTemplateMenuClick));
                                 break;
                         }
+
+                        contextMenuStrip.Items.Add(new ToolStripSeparator());
+                        contextMenuStrip.Items.Add(new ToolStripMenuItem("Export", null, OnExportMenuClick));
                     }
 
                     contextMenuStrip.Items.Add(new ToolStripSeparator());
@@ -504,7 +517,7 @@ namespace _010Proxy.Forms
                 if (name != "")
                 {
                     var template =
-$@"namespace {string.Join(".", repository.Path().ToArray())}
+$@"namespace {string.Join(".", repository.GetNamespace().ToArray())}
 {{
     [RootPacket]
     public class {name} : IRootTemplate
@@ -528,6 +541,28 @@ $@"namespace {string.Join(".", repository.Path().ToArray())}
             }
         }
 
+        private void OnNewEmptyTemplateMenuClick(object sender, EventArgs e)
+        {
+            if (configView.SelectedNode != null && configView.SelectedNode.Tag is RepositoryNode repository)
+            {
+                var name = Prompt.ShowDialog($"New template name:", "New Template");
+
+                if (name != "")
+                {
+                    var newItem = repository.AddItem(EntryType.Template, name, "");
+                    var newNode = new TreeNode(name, 1, 1) { Tag = newItem };
+
+                    configView.SelectedNode.Nodes.Add(newNode);
+                    configView.SelectedNode = newNode;
+                    configView.Sort();
+
+                    _configManager.Save();
+
+                    CreateTemplateEditorTab(newItem);
+                }
+            }
+        }
+
         private void OnNewTemplateMenuClick(object sender, EventArgs e)
         {
             if (configView.SelectedNode != null && configView.SelectedNode.Tag is RepositoryNode repository)
@@ -537,7 +572,7 @@ $@"namespace {string.Join(".", repository.Path().ToArray())}
                 if (name != "")
                 {
                     var template =
-$@"namespace {string.Join(".", repository.Path().ToArray())}
+$@"namespace {string.Join(".", repository.GetNamespace().ToArray())}
 {{
     public class {name}
     {{
@@ -594,6 +629,20 @@ $@"namespace {string.Join(".", repository.Path().ToArray())}
                     }
 
                     CreateTemplateEditorTab(repository);
+                }
+            }
+        }
+
+        private void OnExportMenuClick(object sender, EventArgs e)
+        {
+            if (configView.SelectedNode != null && configView.SelectedNode.Tag is RepositoryNode repository)
+            {
+                using (var dialog = new CommonOpenFileDialog { IsFolderPicker = true })
+                {
+                    if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
+                    {
+                        repository.ExportTo(dialog.FileName);
+                    }
                 }
             }
         }
@@ -680,6 +729,7 @@ $@"namespace {string.Join(".", repository.Path().ToArray())}
         private void configView_DragDrop(object sender, DragEventArgs e)
         {
             var targetNode = configView.GetNodeAt(configView.PointToClient(new Point(e.X, e.Y)));
+            var draggedNode = (TreeNode)e.Data.GetData(typeof(TreeNode));
             var files = (string[])e.Data.GetData(DataFormats.FileDrop);
 
             if (files != null && files.Length > 0)
@@ -702,6 +752,31 @@ $@"namespace {string.Join(".", repository.Path().ToArray())}
                     LoadConfig();
                 }
             }
+
+            if (draggedNode != null)
+            {
+                // TODO: handle case when new node might already exist in target node
+                if (e.Effect == DragDropEffects.Move)
+                {
+                    var repo = (RepositoryNode)draggedNode.Tag;
+                    ((RepositoryNode)draggedNode.Parent.Tag).Items.Remove(repo);
+
+                    draggedNode.Remove();
+                    targetNode.Nodes.Add(draggedNode);
+
+                    ((RepositoryNode)targetNode.Tag).Items.Add(repo);
+                }
+
+                targetNode.Expand();
+            }
+        }
+
+        private void configView_ItemDrag(object sender, ItemDragEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left && configView.SelectedNode.Tag is RepositoryNode repositoryNode && repositoryNode.Type != EntryType.Protocol)
+            {
+                DoDragDrop(e.Item, DragDropEffects.Move);
+            }
         }
 
         private void ImportTreeToConfig(ImportNode tree, RepositoryNode target, OverwriteAction action)
@@ -716,7 +791,8 @@ $@"namespace {string.Join(".", repository.Path().ToArray())}
                     }
 
                     ImportTreeToConfig(entry, folderNode, action);
-                } else if (entry.Type == EntryType.Template)
+                }
+                else if (entry.Type == EntryType.Template)
                 {
                     if (target.TryGetFile(entry.Name, out var fileNode))
                     {
@@ -743,5 +819,23 @@ $@"namespace {string.Join(".", repository.Path().ToArray())}
         }
 
         #endregion
+
+        private void configView_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Delete)
+            {
+                OnDeleteNodeMenuClick(sender, e);
+            }
+        }
+
+        private void flowDataView_NodeMouseClick(object sender, TreeNodeMouseClickEventArgs e)
+        {
+            flowDataView.SelectedNode = flowDataView.GetNodeAt(e.X, e.Y);
+
+            if (flowDataView.SelectedNode.Tag is FieldMeta fieldMeta && tabControl.SelectedTab.Controls[0] is TcpReconstructedInfoControl tabPageControl)
+            {
+                tabPageControl.HighlightFieldPreview(fieldMeta);
+            }
+        }
     }
 }
