@@ -68,8 +68,6 @@ namespace _010Proxy.Views
 
                 packetsTable.Rows[rowIndex].Tag = tcpFlow;
 
-                ApplyProtocolOnFlow(rowIndex);
-
                 if (_stickToBottom)
                 {
                     packetsTable.FirstDisplayedScrollingRowIndex = packetsTable.RowCount - 1;
@@ -93,8 +91,6 @@ namespace _010Proxy.Views
                         packetsTable.Rows[i].Cells[3].Value = tcpFlow.LastPacketTime.Date.ToLocalTime().ToString("HH:mm:ss.ffffff");
                         packetsTable.Rows[i].Cells[4].Value = tcpFlow.PacketsInfo.Count;
                         packetsTable.Rows[i].Cells[5].Value = tcpFlow.FlowData.Count;
-
-                        ApplyProtocolOnFlow(i);
                     }
 
                     break;
@@ -141,12 +137,6 @@ namespace _010Proxy.Views
 
             _templateParser.ParseAssembly(compile.CompiledAssembly);
 
-            var rowsCount = packetsTable.Rows.Count;
-
-            for (var i = 0; i < rowsCount; i++)
-            {
-                ApplyProtocolOnFlow(i);
-            }
 
             if (packetsTable.CurrentCell != null)
             {
@@ -202,17 +192,17 @@ namespace _010Proxy.Views
             {
                 packetPreview.ByteProvider = new DynamicByteProvider(tcpFlow.FlowData);
             });
-            // ParentForm.PreviewFlowData(tcpFlow.Data);
 
-            // TODO: for debugging only, normally the data show be already parsed
-            if (_templateParser != null && tcpFlow.FlowData.Count > 0)
+            if (tcpFlow.Data == null && _templateParser != null && tcpFlow.FlowData.Count > 0)
             {
-                var data = _templateParser.Parse(tcpFlow.FlowData);
-                ParentForm.Invoke((MethodInvoker)delegate
-               {
-                   ParentForm.PreviewFlowData(data);
-               });
+                tcpFlow.Data = _templateParser.Parse(tcpFlow.FlowData);
+
             }
+
+            ParentForm.Invoke((MethodInvoker)delegate
+            {
+                ParentForm.PreviewFlowData(tcpFlow.Data);
+            });
         }
 
         private void packetsTable_CellDoubleClick(object sender, DataGridViewCellEventArgs e)

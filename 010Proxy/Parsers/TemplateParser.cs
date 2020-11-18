@@ -80,6 +80,8 @@ namespace _010Proxy.Parsers
             return Parse(data.ToArray());
         }
 
+        // TODO: this should better return class instance for the purpose of using its methods, e.g. ToString
+        //  but then we lose the FieldMeta descriptions
         public Dictionary<object, object> Parse(byte[] data)
         {
             var eventData = new Dictionary<object, object>();
@@ -275,7 +277,7 @@ namespace _010Proxy.Parsers
                     throw new Exception("CountField is missing for ProtoContract.");
                 }
 
-                var protoLength = state[attribute.SizeField];
+                var protoLength = ((FieldMeta)state[attribute.SizeField]).Value;
                 var method = typeof(Serializer).GetMethods().FirstOrDefault(m => m.Name == "Deserialize" && m.GetParameters().Length == 4);
                 var genericMethod = method?.MakeGenericMethod(classType);
 

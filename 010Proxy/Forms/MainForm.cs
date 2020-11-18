@@ -259,47 +259,60 @@ namespace _010Proxy.Forms
         {
             var nodes = new List<TreeNode>();
 
-            foreach (var item in data)
+            foreach (var newNode in data.Select(item => FieldValueToTreeNode(item.Key, item.Value)))
             {
-                TreeNode newNode;
-
-                if (item.Value is Dictionary<object, object> childData)
-                {
-                    newNode = new TreeNode($"{item.Key}");
-
-                    foreach (var node in DictionaryToTreeViewNodes(childData))
-                    {
-                        newNode.Nodes.Add(node);
-                    }
-                }
-                else if (item.Value.GetType().IsClass)
-                {
-                    newNode = new TreeNode($"{item.Key}");
-
-                    foreach (var node in DictionaryToTreeViewNodes(item.Value.GetType()
-                        .GetProperties(BindingFlags.Instance | BindingFlags.Public)
-                        .Select(pi => new { pi.Name, Value = pi.GetValue(item.Value, null) })
-                        .Union(
-                            item.Value.GetType()
-                                .GetFields()
-                                .Select(fi => new { fi.Name, Value = fi.GetValue(item.Value) })
-                        )
-                        .ToDictionary(ks => (object)ks.Name, vs => vs.Value)))
-                    {
-                        newNode.Nodes.Add(node);
-                    }
-                }
-                else
-                {
-                    newNode = new TreeNode($"{item.Key} = {((FieldMeta)item.Value).Value}") { Tag = item.Value };
-                }
-
                 newNode.Expand();
 
                 nodes.Add(newNode);
             }
 
             return nodes;
+        }
+
+        private TreeNode FieldValueToTreeNode(object key, object value, object tag = null)
+        {
+            TreeNode newNode;
+
+            if (value is Dictionary<object, object> childData)
+            {
+                newNode = new TreeNode($"{key}");
+
+                foreach (var node in DictionaryToTreeViewNodes(childData))
+                {
+                    newNode.Nodes.Add(node);
+                }
+            }
+            else if (value is FieldMeta fieldMeta)
+            {
+                newNode = FieldValueToTreeNode(fieldMeta.Name, fieldMeta.Value, fieldMeta);
+            }
+            else if (value.GetType().IsArray)
+            {
+                newNode = new TreeNode($"{key} = {value.GetType()}");
+            }
+            else if (value.GetType().IsClass)
+            {
+                newNode = new TreeNode($"{key}");
+
+                foreach (var node in DictionaryToTreeViewNodes(value.GetType()
+                    .GetProperties(BindingFlags.Instance | BindingFlags.Public)
+                    .Select(pi => new { pi.Name, Value = pi.GetValue(value, null) })
+                    .Union(
+                        value.GetType()
+                            .GetFields()
+                            .Select(fi => new { fi.Name, Value = fi.GetValue(value) })
+                    )
+                    .ToDictionary(ks => (object)ks.Name, vs => vs.Value)))
+                {
+                    newNode.Nodes.Add(node);
+                }
+            }
+            else
+            {
+                newNode = new TreeNode($"{key} = {value}") { Tag = tag };
+            }
+
+            return newNode;
         }
 
         #endregion
