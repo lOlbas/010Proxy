@@ -1,30 +1,83 @@
 ﻿using _010Proxy.Network;
+using _010Proxy.Templates.Parsers;
+using _010Proxy.Types;
 using _010Proxy.Utils;
 using Be.Windows.Forms;
 using PacketDotNet;
+using System;
 using System.Drawing;
 using System.Linq;
+using System.Reflection;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace _010Proxy.Views
 {
-    // TODO: somehow merge with TcpReconstructedInfoControl and switch between views on click
     public partial class TcpConnectionInfoControl : ProxyTabControl
     {
         private ConnectionInfo _connectionInfo;
         private ulong _packetIndex = 1;
+        private ulong _eventIndex = 1;
 
-        private Color _currentCellColor = Color.DeepSkyBlue;
-        private Color _previousNumberColor = Color.Aqua;
-        private Color _followingNumberColor = Color.LawnGreen;
+        private TemplateParser _templateParser;
+
+        private Bitmap _iconClientSource = Properties.Resources.IconClientSource;
+        private Bitmap _iconServerSource = Properties.Resources.IconServerSource;
+
+        private bool _stickPacketsToBottom = true;
+        private bool _stickEventsToBottom = true;
 
         public TcpConnectionInfoControl()
         {
             InitializeComponent();
+
+            packetsTable.Visible = true;
+            packetsTable.Dock = DockStyle.Fill;
+            eventsTable.Visible = false;
+
+            typeof(DataGridView).InvokeMember("DoubleBuffered", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty, null, packetsTable, new object[] { true });
+            typeof(DataGridView).InvokeMember("DoubleBuffered", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty, null, eventsTable, new object[] { true });
         }
 
-        public void LoadPackets(ConnectionInfo connectionInfo)
+        private void UpdateUI()
         {
+            var applications = ParentForm.ConfigManager.Config.Applications;
+            var hasApplications = false;
+            var hasProtocols = false;
+
+            foreach (var application in applications)
+            {
+                applicationsList.Items.Add(application.Name);
+            }
+
+            if (applications.Count > 0)
+            {
+                hasApplications = true;
+                applicationsList.SelectedIndex = 0;
+
+                foreach (var protocol in applications[0].Protocols)
+                {
+                    protocolsList.Items.Add(protocol.Name);
+                }
+
+                if (applications[0].Protocols.Count > 0)
+                {
+                    hasProtocols = true;
+                    protocolsList.SelectedIndex = 0;
+                }
+            }
+
+            applicationsList.Enabled = hasApplications;
+            protocolsList.Enabled = hasProtocols;
+
+            applyProtocolButton.Enabled = hasProtocols;
+            switchViewButton.Enabled = _templateParser != null;
+        }
+
+        public void LoadConnection(ConnectionInfo connectionInfo)
+        {
+            UpdateUI();
+
             _connectionInfo = connectionInfo;
 
             foreach (var packet in _connectionInfo.Packets.ToList())
@@ -41,14 +94,35 @@ namespace _010Proxy.Views
             {
                 packetsTable.Invoke((MethodInvoker)delegate
                 {
-                    var icon = timedPacket.Sender == SenderEnum.Client ? Properties.Resources.IconClientSource : Properties.Resources.IconServerSource;
+                    var icon = timedPacket.Sender == SenderEnum.Client ? _iconClientSource : _iconServerSource;
                     var localTime = timedPacket.Time.Date.ToLocalTime().ToString("HH:mm:ss.ffffff");
 
-                    var rowIndex = packetsTable.Rows.Add(icon, _packetIndex++, localTime, tcpPacket.AcknowledgmentNumber, tcpPacket.SequenceNumber, tcpPacket.PayloadData.Length, "N/A");
+                    packetsTable.Rows.Add(icon, _packetIndex++, localTime, tcpPacket.AcknowledgmentNumber, tcpPacket.SequenceNumber, tcpPacket.PayloadData.Length, "");
 
-                    packetsTable.Rows[rowIndex].Tag = timedPacket;
+                    if (_stickPacketsToBottom)
+                    {
+                        packetsTable.FirstDisplayedScrollingRowIndex = packetsTable.RowCount - 1;
+                    }
                 });
             }
+        }
+
+        private void DisplayEvent(ParsedEvent parsedEvent)
+        {
+            eventsTable.Invoke((MethodInvoker)delegate
+            {
+                var icon = parsedEvent.Sender == SenderEnum.Client ? _iconClientSource : _iconServerSource;
+                var localTime = parsedEvent.Time.Date.ToLocalTime().ToString("HH:mm:ss.ffffff");
+
+                var rowIndex = eventsTable.Rows.Add(icon, _eventIndex++, localTime, parsedEvent.OpCode, parsedEvent.Length, "");
+
+                eventsTable.Rows[rowIndex].Tag = parsedEvent;
+
+                if (_stickEventsToBottom)
+                {
+                    eventsTable.FirstDisplayedScrollingRowIndex = eventsTable.RowCount - 1;
+                }
+            });
         }
 
         private void OnPacketArrive(TimedPacket timedPacket)
@@ -63,93 +137,100 @@ namespace _010Proxy.Views
             packetPreview.ByteProvider = new DynamicByteProvider(timedPacket.Packet.PayloadData);
         }
 
-        private void packetsTable_CellClick(object sender, DataGridViewCellEventArgs e)
+        public async void ApplyProtocol(RepositoryNode protocol)
         {
-            if (e.RowIndex == -1)
+            eventsTable.Rows.Clear();
+            await Task.Factory.StartNew(() => ApplyProtocolThreaded(protocol));
+            UpdateUI();
+        }
+
+        private void ApplyProtocolThreaded(RepositoryNode protocol)
+        {
+            _templateParser = new TemplateParser();
+            _templateParser.LoadProtocol(protocol);
+            // TODO: handle errors to show to user
+            _connectionInfo.ParseEvents(_templateParser);
+
+            foreach (var parsedEvent in _connectionInfo.ClientStream.ParsedEvents.Concat(_connectionInfo.ServerStream.ParsedEvents).OrderBy(pe => pe.Time))
             {
-                return;
-            }
-
-            // TODO: clear coloring on ESC
-            // TODO: highlight newly arrived packets
-            switch (e.ColumnIndex)
-            {
-                case 3:
-                case 4:
-                    var timedPacket = (TimedPacket)packetsTable.Rows[e.RowIndex].Tag;
-                    var ackNumber = (uint)packetsTable[3, e.RowIndex].Value;
-                    var seqNumber = (uint)packetsTable[4, e.RowIndex].Value;
-                    var senderFilter = timedPacket.Sender == SenderEnum.Client ? SenderEnum.Server : SenderEnum.Client;
-                    var filterColIndex = e.ColumnIndex == 3 ? 4 : 3; // We highlight opposite number column
-
-                    ResetPacketsColors();
-
-                    // TODO: tweak logic, absolutely not perfect
-                    HighlightPreviousPackets(senderFilter, filterColIndex, ackNumber, seqNumber, e.RowIndex);
-                    HighlightFollowingPackets(senderFilter, filterColIndex, ackNumber, seqNumber, timedPacket.Packet.PayloadData.Length, e.RowIndex + 1);
-
-                    break;
+                DisplayEvent(parsedEvent);
             }
         }
 
-        private void ResetPacketsColors()
+        private void applyProtocolButton_Click(object sender, EventArgs e)
         {
-            foreach (DataGridViewRow row in packetsTable.Rows)
+            var protocol = ParentForm.ConfigManager.Config.Applications[applicationsList.SelectedIndex].Protocols[protocolsList.SelectedIndex];
+
+            ApplyProtocol(protocol);
+        }
+
+        private void switchViewButton_Click(object sender, EventArgs e)
+        {
+            if (switchViewButton.Text == "View Events")
             {
-                row.Cells[3].Style.BackColor = Color.White;
-                row.Cells[4].Style.BackColor = Color.White;
+                switchViewButton.Text = "View Packets";
+
+                eventsTable.Visible = true;
+                eventsTable.Dock = DockStyle.Fill;
+                packetsTable.Visible = false;
+            }
+            else if (switchViewButton.Text == "View Packets")
+            {
+                switchViewButton.Text = "View Events";
+
+                packetsTable.Visible = true;
+                packetsTable.Dock = DockStyle.Fill;
+                eventsTable.Visible = false;
             }
         }
 
-        private void HighlightPreviousPackets(SenderEnum senderFilter, int filterColIndex, uint ackNumber, uint seqNumber, int toRowIndex)
+        public void HighlightFieldPreview(FieldMeta fieldMeta)
         {
-            if (packetsTable.Rows.Count < toRowIndex)
+            packetPreview.Select(fieldMeta.Offset, fieldMeta.Length);
+        }
+
+        private void eventsTable_SelectionChanged(object sender, EventArgs e)
+        {
+            if (eventsTable.Rows[eventsTable.CurrentCell.RowIndex].Tag is ParsedEvent parsedEvent)
             {
-                return;
-            }
-
-            for (var i = 0; i < toRowIndex; i++)
-            {
-                var row = packetsTable.Rows[i];
-                var timedPacket = (TimedPacket)row.Tag;
-                var rowAckNumber = (uint)row.Cells[3].Value;
-                var rowSeqNumber = (uint)row.Cells[4].Value;
-                var rowDataLength = (int)row.Cells[5].Value;
-
-                var isSynPacket = rowAckNumber == 0 && rowSeqNumber == ackNumber - 1;
-
-                if (timedPacket.Sender == senderFilter && (rowAckNumber == seqNumber || isSynPacket))
-                {
-                    row.Cells[filterColIndex].Style.BackColor = _previousNumberColor;
-                }
+                PreviewEvent(parsedEvent);
             }
         }
 
-        private void HighlightFollowingPackets(SenderEnum senderFilter, int filterColIndex, uint ackNumber, uint seqNumber, int dataLength, int fromRowIndex)
+        private void PreviewEvent(ParsedEvent parsedEvent)
         {
-            var totalRows = packetsTable.Rows.Count;
+            var data = _connectionInfo.GetEventBytes(parsedEvent);
 
-            if (totalRows < fromRowIndex)
+            packetPreview.Invoke((MethodInvoker)delegate
             {
-                return;
+                packetPreview.ByteProvider = new DynamicByteProvider(data);
+            });
+
+            if (parsedEvent.ParseMode == ParseMode.Root && _templateParser != null)
+            {
+                parsedEvent.Data = _templateParser.ParseBuffer(data, ParseMode.Complete);
+                parsedEvent.ParseMode = ParseMode.Complete;
             }
 
-            for (var i = fromRowIndex; i < totalRows; i++)
+            ParentForm.Invoke((MethodInvoker)delegate
             {
-                var row = packetsTable.Rows[i];
-                var timedPacket = (TimedPacket)row.Tag;
-                var rowAckNumber = (uint)row.Cells[3].Value;
-                var rowSeqNumber = (uint)row.Cells[4].Value;
-                var rowDataLength = (int)row.Cells[5].Value;
+                ParentForm.PreviewFlowData(parsedEvent.Data);
+            });
+        }
 
-                var isSynPacket = ackNumber == 0 && rowAckNumber == seqNumber + 1;
-                var isExpectedAck = isSynPacket || (rowAckNumber >= seqNumber && rowAckNumber <= seqNumber + dataLength);
-                var isExpectedSeq = (rowSeqNumber == ackNumber || isSynPacket);
+        private void packetsTable_Scroll(object sender, ScrollEventArgs e)
+        {
+            if (e.ScrollOrientation == ScrollOrientation.VerticalScroll)
+            {
+                _stickPacketsToBottom = packetsTable.Rows[packetsTable.Rows.Count - 1].Displayed;
+            }
+        }
 
-                if (timedPacket.Sender == senderFilter && isExpectedAck && isExpectedSeq)
-                {
-                    row.Cells[filterColIndex].Style.BackColor = _followingNumberColor;
-                }
+        private void eventsTable_Scroll(object sender, ScrollEventArgs e)
+        {
+            if (e.ScrollOrientation == ScrollOrientation.VerticalScroll)
+            {
+                _stickEventsToBottom = eventsTable.Rows[eventsTable.Rows.Count - 1].Displayed;
             }
         }
     }

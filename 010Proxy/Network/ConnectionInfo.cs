@@ -1,8 +1,7 @@
 ﻿using _010Proxy.Network.TCP;
+using _010Proxy.Templates.Parsers;
+using _010Proxy.Types;
 using _010Proxy.Utils.Extensions;
-using PacketDotNet;
-using SharpPcap;
-using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Net;
@@ -19,18 +18,19 @@ namespace _010Proxy.Network
         public bool ServerDetected { get; }
 
         public List<TimedPacket> Packets { get; }
-        public List<TcpFlow> Flows { get; }
-        private Type _packetType;
+        public TcpStream ClientStream { get; }
+        public TcpStream ServerStream { get; }
+
         private ulong _totalData;
+
+        private ulong _lastClientEventOffset;
+        private ulong _lastServerEventOffset;
 
         public delegate void PacketReceivedHandler(TimedPacket timedPacket);
         public event PacketReceivedHandler OnPacketArrive;
 
-        public delegate void NewFlowHandler(TcpFlow tcpFlow);
-        public event NewFlowHandler OnNewFlow;
-
-        public delegate void FlowUpdateHandler(TcpFlow tcpFlow);
-        public event FlowUpdateHandler OnFlowUpdate;
+        public delegate void StreamUpdateHandler(TcpStream tcpStream);
+        public event StreamUpdateHandler OnStreamUpdate;
 
         public ulong TotalData
         {
@@ -43,7 +43,7 @@ namespace _010Proxy.Network
             }
         }
 
-        public ConnectionInfo(string appName, string protocolName, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint, Type packetType)
+        public ConnectionInfo(string appName, string protocolName, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
         {
             AppName = appName;
             ProtocolName = protocolName;
@@ -52,10 +52,9 @@ namespace _010Proxy.Network
 
             ServerDetected = LocalEndPoint.Address.IsLocal() && !RemoteEndPoint.Address.IsLocal();
 
-            _packetType = packetType;
-
             Packets = new List<TimedPacket>();
-            Flows = new List<TcpFlow>();
+            ClientStream = new TcpStream(SenderEnum.Client);
+            ServerStream = new TcpStream(SenderEnum.Server);
         }
 
         public void AddPacket(TimedPacket timedPacket)
@@ -66,44 +65,41 @@ namespace _010Proxy.Network
             }
 
             TotalData += (ulong)timedPacket.Packet.PayloadData.Length;
-
-            TcpFlow tcpFlow = null;
-            var isNewFlow = false;
-
-            switch (timedPacket.Sender)
+            if (timedPacket.Sender == SenderEnum.Server)
             {
-                case SenderEnum.Client:
-                    tcpFlow = Flows.Find((flow) => flow.InitialSeq == timedPacket.Packet.SequenceNumber);
-                    break;
-                case SenderEnum.Server:
-                    tcpFlow = Flows.Find((flow) => flow.InitialAck == timedPacket.Packet.AcknowledgmentNumber);
-                    break;
-            }
-
-            if (tcpFlow == null)
-            {
-                tcpFlow = new TcpFlow();
-                Flows.Add(tcpFlow);
-                isNewFlow = true;
-            }
-
-            tcpFlow.AddPacket(timedPacket);
-
-            if (isNewFlow)
-            {
-                OnNewFlow?.Invoke(tcpFlow);
+                var x = -1;
             }
             else
             {
-                OnFlowUpdate?.Invoke(tcpFlow);
+                var x = -1;
             }
+            var tcpStream = timedPacket.Sender == SenderEnum.Client ? ClientStream : ServerStream;
+            tcpStream.AppendPacket(timedPacket);
 
             OnPacketArrive?.Invoke(timedPacket);
+            OnStreamUpdate?.Invoke(tcpStream);
         }
 
-        public void AddPacket(TcpPacket packet, PosixTimeval timeVal, SenderEnum sender)
+        public void ParseEvents(TemplateParser templateParser)
         {
-            AddPacket(new TimedPacket(packet, timeVal, sender));
+            ClientStream.ParseEvents(templateParser, ParseMode.Root);
+            ServerStream.ParseEvents(templateParser, ParseMode.Root);
+        }
+
+        public byte[] GetEventBytes(ParsedEvent parsedEvent)
+        {
+            var sourceStream = parsedEvent.Sender == SenderEnum.Client ? ClientStream : ServerStream;
+            var eventBytes = new byte[(int)parsedEvent.Length];
+
+            lock (sourceStream)
+            {
+                var position = sourceStream.Position;
+                sourceStream.Position = parsedEvent.Offset;
+                sourceStream.Read(eventBytes, 0, eventBytes.Length);
+                sourceStream.Position = position;
+            }
+
+            return eventBytes;
         }
 
         public override string ToString()

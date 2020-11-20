@@ -28,52 +28,17 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.infoColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.protocolColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.serverColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.clientColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.appNameColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
             this.dataGridView = new System.Windows.Forms.DataGridView();
+            this.appNameColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.clientColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.serverColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.protocolColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.totalDataColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.infoColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView)).BeginInit();
             this.SuspendLayout();
-            // 
-            // infoColumn
-            // 
-            this.infoColumn.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.infoColumn.HeaderText = "Info";
-            this.infoColumn.Name = "infoColumn";
-            this.infoColumn.ReadOnly = true;
-            // 
-            // protocolColumn
-            // 
-            this.protocolColumn.DataPropertyName = "ProtocolName";
-            this.protocolColumn.HeaderText = "Protocol";
-            this.protocolColumn.Name = "protocolColumn";
-            this.protocolColumn.ReadOnly = true;
-            this.protocolColumn.Width = 75;
-            // 
-            // serverColumn
-            // 
-            this.serverColumn.DataPropertyName = "RemoteEndPoint";
-            this.serverColumn.HeaderText = "Server";
-            this.serverColumn.Name = "serverColumn";
-            this.serverColumn.ReadOnly = true;
-            this.serverColumn.Width = 150;
-            // 
-            // clientColumn
-            // 
-            this.clientColumn.DataPropertyName = "LocalEndPoint";
-            this.clientColumn.HeaderText = "Client";
-            this.clientColumn.Name = "clientColumn";
-            this.clientColumn.ReadOnly = true;
-            this.clientColumn.Width = 150;
-            // 
-            // appNameColumn
-            // 
-            this.appNameColumn.DataPropertyName = "AppName";
-            this.appNameColumn.HeaderText = "App Name";
-            this.appNameColumn.Name = "appNameColumn";
-            this.appNameColumn.ReadOnly = true;
             // 
             // dataGridView
             // 
@@ -87,6 +52,7 @@
             this.clientColumn,
             this.serverColumn,
             this.protocolColumn,
+            this.totalDataColumn,
             this.infoColumn});
             this.dataGridView.Dock = System.Windows.Forms.DockStyle.Fill;
             this.dataGridView.Location = new System.Drawing.Point(0, 0);
@@ -99,6 +65,57 @@
             this.dataGridView.TabIndex = 0;
             this.dataGridView.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView_CellDoubleClick);
             this.dataGridView.CellMouseClick += new System.Windows.Forms.DataGridViewCellMouseEventHandler(this.dataGridView_CellMouseClick);
+            // 
+            // appNameColumn
+            // 
+            this.appNameColumn.DataPropertyName = "AppName";
+            this.appNameColumn.HeaderText = "App Name";
+            this.appNameColumn.Name = "appNameColumn";
+            this.appNameColumn.ReadOnly = true;
+            // 
+            // clientColumn
+            // 
+            this.clientColumn.DataPropertyName = "LocalEndPoint";
+            this.clientColumn.HeaderText = "Client";
+            this.clientColumn.Name = "clientColumn";
+            this.clientColumn.ReadOnly = true;
+            this.clientColumn.Width = 150;
+            // 
+            // serverColumn
+            // 
+            this.serverColumn.DataPropertyName = "RemoteEndPoint";
+            this.serverColumn.HeaderText = "Server";
+            this.serverColumn.Name = "serverColumn";
+            this.serverColumn.ReadOnly = true;
+            this.serverColumn.Width = 150;
+            // 
+            // protocolColumn
+            // 
+            this.protocolColumn.DataPropertyName = "ProtocolName";
+            dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter;
+            this.protocolColumn.DefaultCellStyle = dataGridViewCellStyle1;
+            this.protocolColumn.HeaderText = "Protocol";
+            this.protocolColumn.Name = "protocolColumn";
+            this.protocolColumn.ReadOnly = true;
+            this.protocolColumn.Width = 75;
+            // 
+            // totalDataColumn
+            // 
+            this.totalDataColumn.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
+            this.totalDataColumn.DataPropertyName = "TotalData";
+            dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
+            this.totalDataColumn.DefaultCellStyle = dataGridViewCellStyle2;
+            this.totalDataColumn.HeaderText = "Total Data";
+            this.totalDataColumn.Name = "totalDataColumn";
+            this.totalDataColumn.ReadOnly = true;
+            this.totalDataColumn.Width = 80;
+            // 
+            // infoColumn
+            // 
+            this.infoColumn.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.infoColumn.HeaderText = "Info";
+            this.infoColumn.Name = "infoColumn";
+            this.infoColumn.ReadOnly = true;
             // 
             // CaptureTrafficControl
             // 
@@ -113,12 +130,12 @@
         }
 
         #endregion
-
-        private System.Windows.Forms.DataGridViewTextBoxColumn infoColumn;
-        private System.Windows.Forms.DataGridViewTextBoxColumn protocolColumn;
-        private System.Windows.Forms.DataGridViewTextBoxColumn serverColumn;
-        private System.Windows.Forms.DataGridViewTextBoxColumn clientColumn;
-        private System.Windows.Forms.DataGridViewTextBoxColumn appNameColumn;
         private System.Windows.Forms.DataGridView dataGridView;
+        private System.Windows.Forms.DataGridViewTextBoxColumn appNameColumn;
+        private System.Windows.Forms.DataGridViewTextBoxColumn clientColumn;
+        private System.Windows.Forms.DataGridViewTextBoxColumn serverColumn;
+        private System.Windows.Forms.DataGridViewTextBoxColumn protocolColumn;
+        private System.Windows.Forms.DataGridViewTextBoxColumn totalDataColumn;
+        private System.Windows.Forms.DataGridViewTextBoxColumn infoColumn;
     }
 }

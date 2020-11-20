@@ -1,5 +1,5 @@
 ﻿using _010Proxy.Network;
-using _010Proxy.Parsers;
+using _010Proxy.Templates.Parsers;
 using _010Proxy.Types;
 using _010Proxy.Utils;
 using _010Proxy.Views;
@@ -19,7 +19,7 @@ namespace _010Proxy.Forms
     {
         public Sniffer Sniffer;
 
-        private ConfigManager _configManager;
+        public ConfigManager ConfigManager;
 
         public MainForm()
         {
@@ -28,7 +28,7 @@ namespace _010Proxy.Forms
             configView.TreeViewNodeSorter = new ConfigNodeSorter();
 
             Sniffer = new Sniffer();
-            _configManager = ConfigManager.Instance;
+            ConfigManager = ConfigManager.Instance;
         }
 
         private void MainForm_Load(object sender, EventArgs e)
@@ -48,7 +48,7 @@ namespace _010Proxy.Forms
         {
             configView.Nodes.Clear();
 
-            var config = _configManager.Config;
+            var config = ConfigManager.Config;
 
             foreach (var app in config.Applications)
             {
@@ -89,7 +89,7 @@ namespace _010Proxy.Forms
 
         public void SaveConfig()
         {
-            _configManager.Save();
+            ConfigManager.Save();
         }
 
         #region Tabs creation
@@ -154,26 +154,7 @@ namespace _010Proxy.Forms
             tabControl.TabPages.Add(newTab);
             tabControl.SelectTab(newTab);
 
-            newControl.LoadPackets(connectionInfo);
-        }
-
-        private void CreateConnectionFlowTab(ConnectionInfo connectionInfo)
-        {
-            var newTab = new TabPage($"{connectionInfo}");
-            var newControl = new TcpReconstructedInfoControl()
-            {
-                Dock = DockStyle.Fill,
-                ParentForm = this,
-                ParentTab = newTab
-            };
-
-            newTab.Controls.Add(newControl);
-            newTab.Tag = connectionInfo;
-
-            tabControl.TabPages.Add(newTab);
-            tabControl.SelectTab(newTab);
-
-            newControl.LoadFlows(connectionInfo);
+            newControl.LoadConnection(connectionInfo);
         }
 
         private void CreateTemplateEditorTab(RepositoryNode repositoryNode)
@@ -220,24 +201,6 @@ namespace _010Proxy.Forms
             }
 
             CreateConnectionInfoTab(connectionInfo);
-        }
-
-        public void ShowConnectionFlows(ConnectionInfo connectionInfo)
-        {
-            foreach (TabPage tabPage in tabControl.TabPages)
-            {
-                if (tabPage.Tag is ConnectionInfo tabConnectionInfo) // TODO: also check control type
-                {
-                    if (Equals(tabConnectionInfo, connectionInfo))
-                    {
-                        // TODO: show prompt to notify user tab with this flows info already exists and whether he wants to still open new tab
-                        tabControl.SelectedTab = tabPage;
-                        return;
-                    }
-                }
-            }
-
-            CreateConnectionFlowTab(connectionInfo);
         }
 
         public void PreviewFlowData(Dictionary<object, object> data)
@@ -288,7 +251,7 @@ namespace _010Proxy.Forms
             }
             else if (value.GetType().IsArray)
             {
-                newNode = new TreeNode($"{key} = {value.GetType()}");
+                newNode = new TreeNode($"{key} = {value.GetType()}") { Tag = tag };
             }
             else if (value.GetType().IsClass)
             {
@@ -322,7 +285,7 @@ namespace _010Proxy.Forms
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             Sniffer.StopCapture();
-            _configManager.Save();
+            ConfigManager.Save();
         }
 
         private void tabControl_KeyDown(object sender, KeyEventArgs e)
@@ -392,7 +355,7 @@ namespace _010Proxy.Forms
 
                 e.Node.EndEdit(false);
 
-                _configManager.Save();
+                ConfigManager.Save();
             }
             else
             {
@@ -438,7 +401,7 @@ namespace _010Proxy.Forms
                 }
                 else
                 {
-                    var canApplyProtocol = tabControl.SelectedTab.Controls[0] is TcpReconstructedInfoControl;
+                    var canApplyProtocol = tabControl.SelectedTab.Controls[0] is TcpConnectionInfoControl;
 
                     if (configView.SelectedNode.Tag is ApplicationNode)
                     {
@@ -497,7 +460,7 @@ namespace _010Proxy.Forms
             var newApp = new ApplicationNode();
             var newNode = new TreeNode("New Application", 0, 0) { Tag = newApp };
 
-            _configManager.Config.Applications.Add(newApp);
+            ConfigManager.Config.Applications.Add(newApp);
             configView.Nodes.Add(newNode);
             configView.SelectedNode = newNode;
 
@@ -547,7 +510,7 @@ $@"namespace {string.Join(".", repository.GetNamespace().ToArray())}
                     configView.SelectedNode = newNode;
                     configView.Sort();
 
-                    _configManager.Save();
+                    ConfigManager.Save();
 
                     CreateTemplateEditorTab(newItem);
                 }
@@ -569,7 +532,7 @@ $@"namespace {string.Join(".", repository.GetNamespace().ToArray())}
                     configView.SelectedNode = newNode;
                     configView.Sort();
 
-                    _configManager.Save();
+                    ConfigManager.Save();
 
                     CreateTemplateEditorTab(newItem);
                 }
@@ -601,7 +564,7 @@ $@"namespace {string.Join(".", repository.GetNamespace().ToArray())}
                     configView.SelectedNode = newNode;
                     configView.Sort();
 
-                    _configManager.Save();
+                    ConfigManager.Save();
 
                     CreateTemplateEditorTab(newItem);
                 }
@@ -679,7 +642,7 @@ $@"namespace {string.Join(".", repository.GetNamespace().ToArray())}
                 {
                     if (configView.SelectedNode.Tag is ApplicationNode appNode)
                     {
-                        _configManager.Config.Applications.Remove(appNode);
+                        ConfigManager.Config.Applications.Remove(appNode);
                     }
                 }
                 else
@@ -710,7 +673,7 @@ $@"namespace {string.Join(".", repository.GetNamespace().ToArray())}
 
                 configView.SelectedNode.Remove();
 
-                _configManager.Save();
+                ConfigManager.Save();
             }
         }
 
@@ -718,7 +681,7 @@ $@"namespace {string.Join(".", repository.GetNamespace().ToArray())}
         {
             if (configView.SelectedNode != null && configView.SelectedNode.Tag is RepositoryNode repositoryNode)
             {
-                if (tabControl.SelectedTab.Controls[0] is TcpReconstructedInfoControl control)
+                if (tabControl.SelectedTab.Controls[0] is TcpConnectionInfoControl control)
                 {
                     control.ApplyProtocol(repositoryNode);
                 }
@@ -761,7 +724,7 @@ $@"namespace {string.Join(".", repository.GetNamespace().ToArray())}
 
                     ImportTreeToConfig(tree, repositoryNode, action);
 
-                    _configManager.Save();
+                    ConfigManager.Save();
                     LoadConfig();
                 }
             }
@@ -845,7 +808,7 @@ $@"namespace {string.Join(".", repository.GetNamespace().ToArray())}
         {
             flowDataView.SelectedNode = flowDataView.GetNodeAt(e.X, e.Y);
 
-            if (flowDataView.SelectedNode.Tag is FieldMeta fieldMeta && tabControl.SelectedTab.Controls[0] is TcpReconstructedInfoControl tabPageControl)
+            if (flowDataView.SelectedNode.Tag is FieldMeta fieldMeta && tabControl.SelectedTab.Controls[0] is TcpConnectionInfoControl tabPageControl)
             {
                 tabPageControl.HighlightFieldPreview(fieldMeta);
             }

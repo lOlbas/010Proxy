@@ -25,6 +25,7 @@ namespace _010Proxy.Views
         public CaptureTrafficControl()
         {
             InitializeComponent();
+            dataGridView.AutoGenerateColumns = false;
 
             typeof(DataGridView).InvokeMember("DoubleBuffered", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty, null, dataGridView, new object[] { true });
         }
@@ -137,7 +138,7 @@ namespace _010Proxy.Views
 
                 if (connectionInfo == null)
                 {
-                    connectionInfo = new ConnectionInfo("Unassigned", protocolName, localEndPoint, remoteEndPoint, type);
+                    connectionInfo = new ConnectionInfo("Unassigned", protocolName, localEndPoint, remoteEndPoint);
                     _connections.Add(connectionInfo);
 
                     RefreshConnectionsTable();
@@ -169,7 +170,7 @@ namespace _010Proxy.Views
 
         private void dataGridView_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
         {
-            ParentForm?.ShowConnectionFlows(_connections[e.RowIndex]);
+            ParentForm?.ShowConnectionPackets(_connections[e.RowIndex]);
         }
 
         private void stopCaptureMenuItem_Click(object sender, EventArgs e)
@@ -209,7 +210,6 @@ namespace _010Proxy.Views
             {
                 ParentForm.contextMenuStrip.Items.Clear();
                 ParentForm.contextMenuStrip.Items.Add(new ToolStripMenuItem("View raw packets", null, OnShowRawPacketsMenuClick));
-                ParentForm.contextMenuStrip.Items.Add(new ToolStripMenuItem("View reconstructed packets", null, OnShowReconstructedMenuClick));
                 ParentForm.contextMenuStrip.Show(Cursor.Position);
             }
         }
@@ -217,11 +217,6 @@ namespace _010Proxy.Views
         private void OnShowRawPacketsMenuClick(object sender, EventArgs e)
         {
             ParentForm?.ShowConnectionPackets(_connections[dataGridView.SelectedRows[0].Index]);
-        }
-
-        private void OnShowReconstructedMenuClick(object sender, EventArgs e)
-        {
-            ParentForm?.ShowConnectionFlows(_connections[dataGridView.SelectedRows[0].Index]);
         }
     }
 }
