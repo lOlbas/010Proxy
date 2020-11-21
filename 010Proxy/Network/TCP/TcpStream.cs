@@ -12,16 +12,10 @@ namespace _010Proxy.Network.TCP
         public SenderEnum Sender { get; }
 
         private LinkedList<PacketInfo> _packetsInfo;
-        private List<TimedPacket> _outOfLoopPackets;
-        public List<ParsedEvent> ParsedEvents;
-
-        private readonly object _lock = new object();
 
         public TcpStream(SenderEnum sender)
         {
             _packetsInfo = new LinkedList<PacketInfo>();
-            _outOfLoopPackets = new List<TimedPacket>();
-            ParsedEvents = new List<ParsedEvent>();
             Sender = sender;
         }
 
@@ -37,18 +31,14 @@ namespace _010Proxy.Network.TCP
                 return;
             }
 
-            lock (_lock)
+            lock (_packetsInfo)
             {
-                if (!_packetsInfo.Any())
-                {
-                    _packetsInfo.AddFirst(new PacketInfo(newPacket, base.Length));
-                }
                 // An extra validation step here would be verifying that the order of packets is not messed up, i.e packet #3 did not arrive before packet #2.
                 // This approach however does not take into account the client data that change server sequence number,
                 // so we rely on the SharpPcap giving us packets in the correct order
-                else
+                var newPacketInfo = new PacketInfo(newPacket, base.Length);
+                lock (this)
                 {
-                    var newPacketInfo = new PacketInfo(newPacket, base.Length);
                     var position = base.Position;
 
                     _packetsInfo.AddLast(newPacketInfo);
@@ -56,36 +46,6 @@ namespace _010Proxy.Network.TCP
                     base.Seek(0, SeekOrigin.End);
                     base.Write(payloadData, 0, payloadLength);
                     base.Position = position;
-                }
-                //else
-                //{
-                //    _outOfLoopPackets.Add(newPacket);
-                //}
-            }
-
-            HandleOutOfLoop();
-        }
-
-        private void HandleOutOfLoop()
-        {
-            lock (_packetsInfo)
-            {
-                foreach (var packet in _outOfLoopPackets)
-                {
-                    var payloadData = packet.Packet.PayloadData;
-                    var payloadLength = payloadData.Length;
-
-                    if (packet.Packet.SequenceNumber == _packetsInfo.Last.Value.Seq + payloadLength)
-                    {
-                        var newPacketInfo = new PacketInfo(packet, base.Length);
-                        var position = base.Position;
-
-                        _packetsInfo.AddLast(newPacketInfo);
-
-                        base.Seek(0, SeekOrigin.End);
-                        base.Write(payloadData, 0, payloadLength);
-                        base.Position = position;
-                    }
                 }
             }
         }
@@ -95,9 +55,23 @@ namespace _010Proxy.Network.TCP
             return _packetsInfo.First(info => info.Offset < offset && info.Offset + info.Length >= offset);
         }
 
-        public void ParseEvents(TemplateParser templateParser, ParseMode parseMode)
+        public List<ParsedEvent> ReadEvents(TemplateParser templateParser, ParseMode parseMode, ref long startingStreamPosition)
         {
-            ParsedEvents = templateParser.ParseStream(this, parseMode);
+            var parsedEvents = new List<ParsedEvent>();
+
+            if (Length > startingStreamPosition)
+            {
+                parsedEvents.AddRange(new TemplateReader(templateParser).ParseStream(this, parseMode, startingStreamPosition));
+
+                if (parsedEvents.Count > 0)
+                {
+                    var lastEvent = parsedEvents.Last();
+
+                    startingStreamPosition = lastEvent.Offset + lastEvent.Length;
+                }
+            }
+
+            return parsedEvents;
         }
     }
 }

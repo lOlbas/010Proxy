@@ -5,6 +5,7 @@ using _010Proxy.Utils;
 using Be.Windows.Forms;
 using PacketDotNet;
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Reflection;
@@ -86,6 +87,7 @@ namespace _010Proxy.Views
             }
 
             _connectionInfo.OnPacketArrive += OnPacketArrive;
+            _connectionInfo.OnEventsParse += OnEventsParse;
         }
 
         private void DisplayPacket(TimedPacket timedPacket)
@@ -130,6 +132,14 @@ namespace _010Proxy.Views
             DisplayPacket(timedPacket);
         }
 
+        private void OnEventsParse(List<ParsedEvent> parsedEvents)
+        {
+            foreach (var parsedEvent in parsedEvents)
+            {
+                DisplayEvent(parsedEvent);
+            }
+        }
+
         private void packetsTable_SelectionChanged(object sender, System.EventArgs e)
         {
             var timedPacket = _connectionInfo.Packets[packetsTable.CurrentCell.RowIndex];
@@ -137,23 +147,34 @@ namespace _010Proxy.Views
             packetPreview.ByteProvider = new DynamicByteProvider(timedPacket.Packet.PayloadData);
         }
 
+        // TODO: a racing condition occurs here when new packets are arrived while we are in the process of applying protocol,
+        //  leading to new packet events appearing on top of the table
         public async void ApplyProtocol(RepositoryNode protocol)
         {
             eventsTable.Rows.Clear();
+            _eventIndex = 1;
+
             await Task.Factory.StartNew(() => ApplyProtocolThreaded(protocol));
-            UpdateUI();
+
+            if (_templateParser != null)
+            {
+                UpdateUI();
+                ToggleEventsView();
+            }
         }
 
         private void ApplyProtocolThreaded(RepositoryNode protocol)
         {
-            _templateParser = new TemplateParser();
-            _templateParser.LoadProtocol(protocol);
-            // TODO: handle errors to show to user
-            _connectionInfo.ParseEvents(_templateParser);
-
-            foreach (var parsedEvent in _connectionInfo.ClientStream.ParsedEvents.Concat(_connectionInfo.ServerStream.ParsedEvents).OrderBy(pe => pe.Time))
+            try
             {
-                DisplayEvent(parsedEvent);
+                _templateParser = new TemplateParser();
+                _templateParser.LoadProtocol(protocol);
+                _connectionInfo.ParseEvents(_templateParser);
+            }
+            catch (Exception e)
+            {
+                _templateParser = null;
+                MessageBox.Show(e.Message, "Error applying protocol", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -168,20 +189,30 @@ namespace _010Proxy.Views
         {
             if (switchViewButton.Text == "View Events")
             {
-                switchViewButton.Text = "View Packets";
-
-                eventsTable.Visible = true;
-                eventsTable.Dock = DockStyle.Fill;
-                packetsTable.Visible = false;
+                ToggleEventsView();
             }
             else if (switchViewButton.Text == "View Packets")
             {
-                switchViewButton.Text = "View Events";
-
-                packetsTable.Visible = true;
-                packetsTable.Dock = DockStyle.Fill;
-                eventsTable.Visible = false;
+                TogglePacketsView();
             }
+        }
+
+        private void ToggleEventsView()
+        {
+            switchViewButton.Text = "View Packets";
+
+            eventsTable.Visible = true;
+            eventsTable.Dock = DockStyle.Fill;
+            packetsTable.Visible = false;
+        }
+
+        private void TogglePacketsView()
+        {
+            switchViewButton.Text = "View Events";
+
+            packetsTable.Visible = true;
+            packetsTable.Dock = DockStyle.Fill;
+            eventsTable.Visible = false;
         }
 
         public void HighlightFieldPreview(FieldMeta fieldMeta)
@@ -208,7 +239,7 @@ namespace _010Proxy.Views
 
             if (parsedEvent.ParseMode == ParseMode.Root && _templateParser != null)
             {
-                parsedEvent.Data = _templateParser.ParseBuffer(data, ParseMode.Complete);
+                parsedEvent.Data = new TemplateReader(_templateParser).ParseBuffer(data, ParseMode.Complete);
                 parsedEvent.ParseMode = ParseMode.Complete;
             }
 

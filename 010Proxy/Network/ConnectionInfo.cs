@@ -2,8 +2,10 @@
 using _010Proxy.Templates.Parsers;
 using _010Proxy.Types;
 using _010Proxy.Utils.Extensions;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Net;
 
 namespace _010Proxy.Network
@@ -20,17 +22,17 @@ namespace _010Proxy.Network
         public List<TimedPacket> Packets { get; }
         public TcpStream ClientStream { get; }
         public TcpStream ServerStream { get; }
+        private TemplateParser _templateParser;
 
         private ulong _totalData;
-
-        private ulong _lastClientEventOffset;
-        private ulong _lastServerEventOffset;
+        private long _lastClientEventPosition;
+        private long _lastServerEventPosition;
 
         public delegate void PacketReceivedHandler(TimedPacket timedPacket);
         public event PacketReceivedHandler OnPacketArrive;
 
-        public delegate void StreamUpdateHandler(TcpStream tcpStream);
-        public event StreamUpdateHandler OnStreamUpdate;
+        public delegate void EventsParsedHandler(List<ParsedEvent> parsedEvents);
+        public event EventsParsedHandler OnEventsParse;
 
         public ulong TotalData
         {
@@ -65,25 +67,54 @@ namespace _010Proxy.Network
             }
 
             TotalData += (ulong)timedPacket.Packet.PayloadData.Length;
-            if (timedPacket.Sender == SenderEnum.Server)
-            {
-                var x = -1;
-            }
-            else
-            {
-                var x = -1;
-            }
             var tcpStream = timedPacket.Sender == SenderEnum.Client ? ClientStream : ServerStream;
             tcpStream.AppendPacket(timedPacket);
 
             OnPacketArrive?.Invoke(timedPacket);
-            OnStreamUpdate?.Invoke(tcpStream);
+
+            TryParseEvents();
+        }
+
+        private void TryParseEvents()
+        {
+            if (_templateParser != null)
+            {
+                try
+                {
+                    var parsedEvents = ParseEvents();
+
+                    if (parsedEvents.Count > 0)
+                    {
+                        OnEventsParse?.Invoke(parsedEvents);
+                    }
+                }
+                catch (Exception e)
+                {
+                    // ignored
+                }
+            }
         }
 
         public void ParseEvents(TemplateParser templateParser)
         {
-            ClientStream.ParseEvents(templateParser, ParseMode.Root);
-            ServerStream.ParseEvents(templateParser, ParseMode.Root);
+            _templateParser = templateParser;
+            _lastClientEventPosition = 0;
+            _lastServerEventPosition = 0;
+
+            TryParseEvents();
+        }
+
+        private List<ParsedEvent> ParseEvents()
+        {
+            if (_templateParser == null)
+            {
+                return new List<ParsedEvent>();
+            }
+
+            var clientEvents = ClientStream.ReadEvents(_templateParser, ParseMode.Root, ref _lastClientEventPosition);
+            var serverEvents = ServerStream.ReadEvents(_templateParser, ParseMode.Root, ref _lastServerEventPosition);
+
+            return clientEvents.Concat(serverEvents).OrderBy(pe => pe.Time).ToList();
         }
 
         public byte[] GetEventBytes(ParsedEvent parsedEvent)

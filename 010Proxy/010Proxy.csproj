@@ -115,6 +115,7 @@
     <Compile Include="Templates\Attributes\OpCodeListAttribute.cs" />
     <Compile Include="Templates\Attributes\RootAttribute.cs" />
     <Compile Include="Templates\IRootTemplate.cs" />
+    <Compile Include="Templates\Parsers\TemplateReader.cs" />
     <Compile Include="Types\ProxyConfig.cs" />
     <Compile Include="Types\TcpTypes.cs" />
     <Compile Include="Utils\Extensions\IPAddressExtensions.cs" />
