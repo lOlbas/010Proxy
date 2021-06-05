@@ -58,7 +58,6 @@ namespace _010Proxy.Views
             // Did the number of characters in the line number display change?
             // i.e. nnn VS nn, or nnnn VS nn, etc...
 
-            _source.Content = templateEditor.Text;
             ParentTab.Text = _source.Name + "*";
 
             var maxLineNumberCharLength = templateEditor.Lines.Count.ToString().Length;
@@ -126,6 +125,7 @@ namespace _010Proxy.Views
         {
             if (e.KeyCode == Keys.S && e.Control)
             {
+                _source.Content = templateEditor.Text;
                 ParentForm.SaveConfig();
                 ParentTab.Text = _source.Name;
 

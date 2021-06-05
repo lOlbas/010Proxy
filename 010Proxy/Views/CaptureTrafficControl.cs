@@ -6,10 +6,13 @@ using SharpPcap;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Windows.Forms;
+using Microsoft.WindowsAPICodePack.Dialogs;
+using SharpPcap.LibPcap;
 
 namespace _010Proxy.Views
 {
@@ -44,25 +47,24 @@ namespace _010Proxy.Views
 
         public void StopNetworkAnalysis()
         {
-            _connections.Clear();
             ParentForm.Sniffer.OnPacketReceive -= OnPacketReceive;
             ParentForm.Sniffer.StopCapture();
             UpdateMenu();
         }
 
-        private void OnPacketReceive(Packet packet, PosixTimeval timeVal)
+        private void OnPacketReceive(Packet packet, RawCapture rawPacket)
         {
             if (packet.Is<IPPacket>(out var ipPacket))
             {
-                HandleIpPacket(ipPacket, timeVal);
+                HandleIpPacket(ipPacket, rawPacket);
             }
         }
 
-        private void HandleIpPacket(IPPacket ipPacket, PosixTimeval timeVal)
+        private void HandleIpPacket(IPPacket ipPacket, RawCapture rawPacket)
         {
             if (ipPacket.Is<TcpPacket>(out var tcpPacket))
             {
-                HandleTcpPacket(tcpPacket, ipPacket, timeVal);
+                HandleTcpPacket(tcpPacket, ipPacket, rawPacket);
             }
 
             // TODO: UDP is not yet supported
@@ -72,7 +74,7 @@ namespace _010Proxy.Views
             }
         }
 
-        private void HandleTcpPacket(TcpPacket tcpPacket, IPPacket ipPacket, PosixTimeval timeVal)
+        private void HandleTcpPacket(TcpPacket tcpPacket, IPPacket ipPacket, RawCapture rawPacket)
         {
             var srcIp = ipPacket.SourceAddress;
             var dstIp = ipPacket.DestinationAddress;
@@ -138,13 +140,13 @@ namespace _010Proxy.Views
 
                 if (connectionInfo == null)
                 {
-                    connectionInfo = new ConnectionInfo("Unassigned", protocolName, localEndPoint, remoteEndPoint);
+                    connectionInfo = new ConnectionInfo("Unassigned", protocolName, localEndPoint, remoteEndPoint, _device);
                     _connections.Add(connectionInfo);
 
                     RefreshConnectionsTable();
                 }
 
-                connectionInfo.AddPacket(new TimedPacket(tcpPacket, timeVal, sender));
+                connectionInfo.AddPacket(new TimedPacket(tcpPacket, rawPacket, sender));
             }
         }
 
@@ -170,7 +172,10 @@ namespace _010Proxy.Views
 
         private void dataGridView_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
         {
-            ParentForm?.ShowConnectionPackets(_connections[e.RowIndex]);
+            if (e.RowIndex >= 0)
+            {
+                ParentForm?.ShowConnectionPackets(_connections[e.RowIndex]);
+            }
         }
 
         private void stopCaptureMenuItem_Click(object sender, EventArgs e)
@@ -210,6 +215,8 @@ namespace _010Proxy.Views
             {
                 ParentForm.contextMenuStrip.Items.Clear();
                 ParentForm.contextMenuStrip.Items.Add(new ToolStripMenuItem("View raw packets", null, OnShowRawPacketsMenuClick));
+                ParentForm.contextMenuStrip.Items.Add(new ToolStripSeparator());
+                ParentForm.contextMenuStrip.Items.Add(new ToolStripMenuItem("Export as PCAP", null, OnExportAsPCAPMenuClick));
                 ParentForm.contextMenuStrip.Show(Cursor.Position);
             }
         }
@@ -217,6 +224,32 @@ namespace _010Proxy.Views
         private void OnShowRawPacketsMenuClick(object sender, EventArgs e)
         {
             ParentForm?.ShowConnectionPackets(_connections[dataGridView.SelectedRows[0].Index]);
+        }
+
+        private void OnExportAsPCAPMenuClick(object sender, EventArgs e)
+        {
+            using (var dialog = new CommonOpenFileDialog())
+            {
+                if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
+                {
+                    var filename = dialog.FileName;
+
+                    if (!filename.EndsWith(".pcap"))
+                    {
+                        filename += ".pcap";
+                    }
+
+                    var writer = new CaptureFileWriterDevice(filename);
+
+                    foreach (var packet in _connections[dataGridView.SelectedRows[0].Index].Packets)
+                    {
+                        writer.Write(packet.RawPacket);
+                    }
+
+                    writer.Close();
+                }
+            }
+            
         }
     }
 }

@@ -1,22 +1,35 @@
 ﻿using _010Proxy.Network;
-using _010Proxy.Templates.Parsers;
+using _010Proxy.Templates;
+using _010Proxy.Templates.Attributes;
 using _010Proxy.Types;
 using _010Proxy.Utils;
 using _010Proxy.Views;
 using Microsoft.WindowsAPICodePack.Dialogs;
 using SharpPcap;
+using SharpPcap.LibPcap;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 namespace _010Proxy.Forms
 {
     public partial class MainForm : Form
     {
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        public static extern int GetScrollPos(IntPtr hWnd, int nBar);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        public static extern int SetScrollPos(IntPtr hWnd, int nBar, int nPos, bool bRedraw);
+
+        private const int SB_HORZ = 0x0;
+        private const int SB_VERT = 0x1;
+
         public Sniffer Sniffer;
 
         public ConfigManager ConfigManager;
@@ -90,6 +103,22 @@ namespace _010Proxy.Forms
         public void SaveConfig()
         {
             ConfigManager.Save();
+        }
+
+        private void OpenPCAPFile(string filename)
+        {
+            try
+            {
+                ICaptureDevice device = new CaptureFileReaderDevice(filename);
+
+                CreateCaptureTrafficTab(device);
+            }
+            catch (Exception e)
+            {
+                //MessageBox.Show(e.Message, "Error opening file: \r\n" + e, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(e.Message, "Error opening PCAP file", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
         }
 
         #region Tabs creation
@@ -203,6 +232,23 @@ namespace _010Proxy.Forms
             CreateConnectionInfoTab(connectionInfo);
         }
 
+        public void PreviewObject(object data)
+        {
+            flowDataView.Nodes.Clear();
+
+            if (data == null)
+            {
+                return;
+            }
+
+            PreviewFlowData(data
+                .GetType()
+                .GetFields()
+                .Select(fi => new { fi.Name, Value = fi.GetValue(data) })
+                .ToDictionary(ks => (object)ks.Name, vs => vs.Value)
+            );
+        }
+
         public void PreviewFlowData(Dictionary<object, object> data)
         {
             flowDataView.Nodes.Clear();
@@ -235,6 +281,14 @@ namespace _010Proxy.Forms
         private TreeNode FieldValueToTreeNode(object key, object value, object tag = null)
         {
             TreeNode newNode;
+            // TODO: handle case when value == null
+
+            if (value == null)
+            {
+                return new TreeNode($"{key} = null") { Tag = tag };
+            }
+
+            var valueType = value.GetType();
 
             if (value is Dictionary<object, object> childData)
             {
@@ -245,18 +299,42 @@ namespace _010Proxy.Forms
                     newNode.Nodes.Add(node);
                 }
             }
-            else if (value is FieldMeta fieldMeta)
+            else if (value is string valueStr)
             {
-                newNode = FieldValueToTreeNode(fieldMeta.Name, fieldMeta.Value, fieldMeta);
+                newNode = new TreeNode($"{key} = {valueStr}") { Tag = tag };
             }
-            else if (value.GetType().IsArray)
+            // else if (valueType.IsArray)
+            else if (value is IEnumerable valueArray)
             {
-                newNode = new TreeNode($"{key} = {value.GetType()}") { Tag = tag };
-            }
-            else if (value.GetType().IsClass)
-            {
-                newNode = new TreeNode($"{key}");
+                
+                var index = 0;
+                var newNodes = new List<TreeNode>();
 
+                foreach (var obj in valueArray)
+                {
+                    newNodes.Add(FieldValueToTreeNode("Array Item #" + ++index, obj));
+                }
+
+                var elType = valueArray.GetType().GetGenericArguments().Length == 0 ? valueArray.GetType().GetElementType() : valueArray.GetType().GetGenericArguments()[0];
+
+                newNode = new TreeNode($"{key} = {elType}[{index}]") { Tag = tag };
+                newNode.Nodes.AddRange(newNodes.ToArray());
+
+                // TODO: array of non-primitive types
+            }
+            else if (valueType.IsClass)
+            {
+                newNode = new TreeNode($"{key} ({valueType.Name})");
+                var classFields = value.GetType().GetFields();
+
+                foreach (var classField in classFields)
+                {
+                    var fieldValue = classField.GetValue(value);
+                    var fieldAttribute = classField.GetCustomAttribute<FieldAttribute>();
+                    newNode.Nodes.Add(FieldValueToTreeNode(classField.Name, fieldValue, fieldAttribute));
+                }
+
+                /*
                 foreach (var node in DictionaryToTreeViewNodes(value.GetType()
                     .GetProperties(BindingFlags.Instance | BindingFlags.Public)
                     .Select(pi => new { pi.Name, Value = pi.GetValue(value, null) })
@@ -269,13 +347,27 @@ namespace _010Proxy.Forms
                 {
                     newNode.Nodes.Add(node);
                 }
+                */
             }
             else
             {
+                // TODO: replace this test hack with a separate window similar to 010Editor to show selected value in multiple types
+                if (value is int intValue)
+                {
+                    value = $"{value} ({BitConverter.ToSingle(BitConverter.GetBytes(intValue), 0)})";
+                }
+
                 newNode = new TreeNode($"{key} = {value}") { Tag = tag };
             }
 
+            newNode.Expand();
+
             return newNode;
+        }
+
+        public void UpdateStatusLabel(string text)
+        {
+            statusLabel.Text = text;
         }
 
         #endregion
@@ -347,10 +439,13 @@ namespace _010Proxy.Forms
 
         private void configView_AfterLabelEdit(object sender, NodeLabelEditEventArgs e)
         {
+            var scrollPos = GetTreeViewScrollPos(configView);
+
             if (!string.IsNullOrEmpty(e.Label))
             {
                 // TODO: somehow forbid same names for nodes
 
+                e.Node.Text = e.Label;
                 ((ConfigNode)e.Node.Tag).Name = e.Label;
 
                 e.Node.EndEdit(false);
@@ -363,11 +458,13 @@ namespace _010Proxy.Forms
             }
 
             configView.LabelEdit = false;
+            if (!string.IsNullOrEmpty(e.Label))
+            {
+                configView.Sort(); // configView.BeginInvoke(new MethodInvoker(configView.Sort));
+            }
 
-            configView.BeginInvoke(new MethodInvoker(configView.Sort));
-
-            // TODO: seems to have no effect
             configView.SelectedNode = e.Node;
+            SetTreeViewScrollPos(configView, scrollPos);
         }
 
         #endregion
@@ -507,8 +604,8 @@ $@"namespace {string.Join(".", repository.GetNamespace().ToArray())}
                     var newNode = new TreeNode(name, 1, 1) { Tag = newItem };
 
                     configView.SelectedNode.Nodes.Add(newNode);
-                    configView.SelectedNode = newNode;
                     configView.Sort();
+                    configView.SelectedNode = newNode;
 
                     ConfigManager.Save();
 
@@ -529,8 +626,8 @@ $@"namespace {string.Join(".", repository.GetNamespace().ToArray())}
                     var newNode = new TreeNode(name, 1, 1) { Tag = newItem };
 
                     configView.SelectedNode.Nodes.Add(newNode);
-                    configView.SelectedNode = newNode;
                     configView.Sort();
+                    configView.SelectedNode = newNode;
 
                     ConfigManager.Save();
 
@@ -627,8 +724,16 @@ $@"namespace {string.Join(".", repository.GetNamespace().ToArray())}
         {
             if (configView.SelectedNode != null)
             {
-                configView.LabelEdit = true;
-                configView.SelectedNode.BeginEdit();
+                if (configView.LabelEdit == false)
+                {
+                    configView.LabelEdit = true;
+                    configView.SelectedNode.BeginEdit();
+                }
+                else
+                {
+                    configView.LabelEdit = false;
+                    configView.SelectedNode.EndEdit(true);
+                }
             }
         }
 
@@ -798,9 +903,15 @@ $@"namespace {string.Join(".", repository.GetNamespace().ToArray())}
 
         private void configView_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.Delete)
+            switch (e.KeyCode)
             {
-                OnDeleteNodeMenuClick(sender, e);
+                case Keys.Delete:
+                    OnDeleteNodeMenuClick(sender, e);
+                    break;
+
+                case Keys.F2:
+                    OnRenameNodeMenuClick(sender, e);
+                    break;
             }
         }
 
@@ -808,10 +919,52 @@ $@"namespace {string.Join(".", repository.GetNamespace().ToArray())}
         {
             flowDataView.SelectedNode = flowDataView.GetNodeAt(e.X, e.Y);
 
-            if (flowDataView.SelectedNode.Tag is FieldMeta fieldMeta && tabControl.SelectedTab.Controls[0] is TcpConnectionInfoControl tabPageControl)
+            if (flowDataView.SelectedNode.Tag == null)
+            {
+                return;
+            }
+
+            if (!(tabControl.SelectedTab.Controls[0] is TcpConnectionInfoControl tabPageControl))
+            {
+                return;
+            }
+
+            if (flowDataView.SelectedNode.Tag is FieldMeta fieldMeta)
             {
                 tabPageControl.HighlightFieldPreview(fieldMeta);
             }
+
+            if (flowDataView.SelectedNode.Tag is FieldAttribute fieldAttribute)
+            {
+                // tabPageControl.HighlightFieldPreview(fieldAttribute.Offset, fieldAttribute.Length);
+            }
+        }
+
+        private void quitFileMenuItem_Click(object sender, EventArgs e)
+        {
+            Close();
+        }
+
+        private void openFileMenuItem_Click(object sender, EventArgs e)
+        {
+            using (var dialog = new CommonOpenFileDialog())
+            {
+                if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
+                {
+                    OpenPCAPFile(dialog.FileName);
+                }
+            }
+        }
+
+        private Point GetTreeViewScrollPos(TreeView treeView)
+        {
+            return new Point(GetScrollPos(treeView.Handle, SB_HORZ), GetScrollPos(treeView.Handle, SB_VERT));
+        }
+
+        private void SetTreeViewScrollPos(TreeView treeView, Point scrollPosition)
+        {
+            SetScrollPos(treeView.Handle, SB_HORZ, scrollPosition.X, true);
+            SetScrollPos(treeView.Handle, SB_VERT, scrollPosition.Y, true);
         }
     }
 }

@@ -12,13 +12,15 @@ namespace _010Proxy.Network
     public class TimedPacket
     {
         public PosixTimeval Time;
+        public RawCapture RawPacket;
         public TcpPacket Packet;
         public SenderEnum Sender;
 
-        public TimedPacket(TcpPacket packet, PosixTimeval time, SenderEnum sender)
+        public TimedPacket(TcpPacket packet, RawCapture rawPacket, SenderEnum sender)
         {
             Packet = packet;
-            Time = time;
+            RawPacket = rawPacket;
+            Time = rawPacket.Timeval;
             Sender = sender;
         }
     }

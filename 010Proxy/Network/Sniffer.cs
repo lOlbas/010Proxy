@@ -12,7 +12,7 @@ namespace _010Proxy.Network
 
         private ICaptureDevice _activeDevice;
 
-        public event Action<Packet, PosixTimeval> OnPacketReceive;
+        public event Action<Packet, RawCapture> OnPacketReceive;
 
         public Sniffer()
         {
@@ -40,6 +40,9 @@ namespace _010Proxy.Network
                 case LibPcapLiveDevice livePcapDevice:
                     livePcapDevice.Open(DeviceMode.Promiscuous, readTimeoutMilliseconds);
                     break;
+                case CaptureFileReaderDevice fileReaderDevice:
+                    fileReaderDevice.Open();
+                    break;
                 default:
                     throw new InvalidOperationException("Unknown device type of " + _activeDevice.GetType());
             }
@@ -53,6 +56,7 @@ namespace _010Proxy.Network
             {
                 _activeDevice.OnPacketArrival -= OnPacketArrival;
                 _activeDevice.StopCapture();
+                _activeDevice.Close();
                 _activeDevice = null;
             }
         }
@@ -61,7 +65,7 @@ namespace _010Proxy.Network
         {
             var packet = Packet.ParsePacket(e.Packet.LinkLayerType, e.Packet.Data);
 
-            OnPacketReceive?.Invoke(packet, e.Packet.Timeval);
+            OnPacketReceive?.Invoke(packet, e.Packet);
         }
     }
 }

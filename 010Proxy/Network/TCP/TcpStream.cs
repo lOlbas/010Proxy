@@ -1,4 +1,6 @@
-﻿using _010Proxy.Templates.Parsers;
+﻿using System;
+using _010Proxy.Templates;
+using _010Proxy.Templates.Parsers;
 using _010Proxy.Types;
 using System.Collections.Generic;
 using System.IO;
@@ -10,6 +12,8 @@ namespace _010Proxy.Network.TCP
     public class TcpStream : MemoryStream
     {
         public SenderEnum Sender { get; }
+
+        public event Action<float> OnParseStreamProgress;
 
         private LinkedList<PacketInfo> _packetsInfo;
 
@@ -52,7 +56,10 @@ namespace _010Proxy.Network.TCP
 
         public PacketInfo PacketAtOffset(long offset)
         {
-            return _packetsInfo.First(info => info.Offset < offset && info.Offset + info.Length >= offset);
+            lock (this)
+            {
+                return _packetsInfo.First(info => info.Offset < offset && info.Offset + info.Length >= offset);
+            }
         }
 
         public List<ParsedEvent> ReadEvents(TemplateParser templateParser, ParseMode parseMode, ref long startingStreamPosition)
@@ -61,7 +68,11 @@ namespace _010Proxy.Network.TCP
 
             if (Length > startingStreamPosition)
             {
-                parsedEvents.AddRange(new TemplateReader(templateParser).ParseStream(this, parseMode, startingStreamPosition));
+                var templateReader = new TemplateReader(templateParser, this, startingStreamPosition, parseMode);
+                
+                templateReader.OnReadEventsProgress += OnParseStreamProgress;
+
+                parsedEvents.AddRange(templateReader.ParseStream(this));
 
                 if (parsedEvents.Count > 0)
                 {

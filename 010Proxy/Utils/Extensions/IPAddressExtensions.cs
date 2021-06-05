@@ -25,6 +25,7 @@ namespace _010Proxy.Utils.Extensions
         public static List<Subnet> Subnets = new List<Subnet>()
         {
             new Subnet(IPAddress.Parse("192.168.0.0"), 16),
+            new Subnet(IPAddress.Parse("10.0.0.0"), 8),
         };
 
         public static int Compare(this IPAddress x, IPAddress y)
@@ -47,7 +48,7 @@ namespace _010Proxy.Utils.Extensions
 
         public static bool IsLocal(this IPAddress address)
         {
-            return Subnets.All(address.IsInSubnet);
+            return Subnets.Any(address.IsInSubnet);
         }
 
         public static bool IsInSubnet(this IPAddress address, Subnet subnet)
@@ -72,7 +73,7 @@ namespace _010Proxy.Utils.Extensions
                 var ipAddressBits = BitConverter.ToUInt32(address.GetAddressBytes().Reverse().ToArray(), 0);
 
                 // Get the mask/network address as unsigned integer.
-                uint mask = uint.MaxValue << (32 - maskLength);
+                uint mask = 0xFFFFFFFF << (32 - maskLength);
 
                 // https://stackoverflow.com/a/1499284/3085985
                 // Bitwise AND mask and MaskAddress, this should be the same as mask and IpAddress

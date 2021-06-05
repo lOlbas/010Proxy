@@ -1,7 +1,8 @@
 ﻿using _010Proxy.Network;
-using _010Proxy.Templates.Parsers;
+using _010Proxy.Templates;
 using SharpPcap;
 using System.Collections.Generic;
+using ProtoBuf;
 
 namespace _010Proxy.Types
 {
@@ -24,14 +25,27 @@ namespace _010Proxy.Types
         }
     }
 
+    public struct ParsedEventOld
+    {
+        public long Offset;
+        public long Length;
+        public SenderEnum Sender;
+        public PosixTimeval Time;
+        public Dictionary<string, object> OpCodes;
+        public ParseMode ParseMode;
+        public Dictionary<object, object> Data;
+    }
+
     public struct ParsedEvent
     {
         public long Offset;
         public long Length;
         public SenderEnum Sender;
         public PosixTimeval Time;
-        public object OpCode;
         public ParseMode ParseMode;
-        public Dictionary<object, object> Data;
+
+        public object EventInstance;
+        public Dictionary<object, object> MetaData;
+        public Dictionary<string, object> OpCodes;
     }
 }

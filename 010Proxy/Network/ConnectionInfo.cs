@@ -1,4 +1,5 @@
 ﻿using _010Proxy.Network.TCP;
+using _010Proxy.Templates;
 using _010Proxy.Templates.Parsers;
 using _010Proxy.Types;
 using _010Proxy.Utils.Extensions;
@@ -7,6 +8,8 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Net;
+using Microsoft.WindowsAPICodePack.Shell.PropertySystem;
+using SharpPcap;
 
 namespace _010Proxy.Network
 {
@@ -16,6 +19,7 @@ namespace _010Proxy.Network
         public string ProtocolName { get; }
         public IPEndPoint LocalEndPoint { get; }
         public IPEndPoint RemoteEndPoint { get; }
+        public ICaptureDevice Device { get; }
 
         public bool ServerDetected { get; }
 
@@ -45,12 +49,23 @@ namespace _010Proxy.Network
             }
         }
 
-        public ConnectionInfo(string appName, string protocolName, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
+        public string GetLocalName()
+        {
+            return Dns.GetHostEntry(LocalEndPoint.Address).HostName;
+        }
+
+        public string GetRemoteName()
+        {
+            return Dns.GetHostEntry(RemoteEndPoint.Address).HostName;
+        }
+
+        public ConnectionInfo(string appName, string protocolName, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint, ICaptureDevice device)
         {
             AppName = appName;
             ProtocolName = protocolName;
             LocalEndPoint = localEndPoint;
             RemoteEndPoint = remoteEndPoint;
+            Device = device;
 
             ServerDetected = LocalEndPoint.Address.IsLocal() && !RemoteEndPoint.Address.IsLocal();
 
@@ -79,18 +94,11 @@ namespace _010Proxy.Network
         {
             if (_templateParser != null)
             {
-                try
-                {
-                    var parsedEvents = ParseEvents();
+                var parsedEvents = ParseEvents();
 
-                    if (parsedEvents.Count > 0)
-                    {
-                        OnEventsParse?.Invoke(parsedEvents);
-                    }
-                }
-                catch (Exception e)
+                if (parsedEvents.Count > 0)
                 {
-                    // ignored
+                    OnEventsParse?.Invoke(parsedEvents);
                 }
             }
         }

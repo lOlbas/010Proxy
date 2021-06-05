@@ -40,19 +40,21 @@
             this.splitter = new System.Windows.Forms.Splitter();
             this.packetPreview = new Be.Windows.Forms.HexBox();
             this.actionsPanel = new System.Windows.Forms.Panel();
+            this.ignoreFilterListCheckBox = new System.Windows.Forms.CheckBox();
+            this.toggleOpCodesButton = new System.Windows.Forms.Button();
             this.protocolsList = new System.Windows.Forms.ComboBox();
             this.selectProtocolLabel = new System.Windows.Forms.Label();
             this.applicationsList = new System.Windows.Forms.ComboBox();
             this.applyProtocolButton = new System.Windows.Forms.Button();
             this.switchViewButton = new System.Windows.Forms.Button();
             this.eventsTable = new System.Windows.Forms.DataGridView();
-            this.tablesPanel = new System.Windows.Forms.Panel();
             this.eventDrectionColumn = new System.Windows.Forms.DataGridViewImageColumn();
             this.eventIndexColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.eventTimeColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.eventTypeColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.eventLengthColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.eventDataColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.tablesPanel = new System.Windows.Forms.Panel();
             ((System.ComponentModel.ISupportInitialize)(this.packetsTable)).BeginInit();
             this.actionsPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.eventsTable)).BeginInit();
@@ -86,6 +88,7 @@
             this.packetsTable.TabIndex = 0;
             this.packetsTable.Scroll += new System.Windows.Forms.ScrollEventHandler(this.packetsTable_Scroll);
             this.packetsTable.SelectionChanged += new System.EventHandler(this.packetsTable_SelectionChanged);
+            this.packetsTable.MouseDown += new System.Windows.Forms.MouseEventHandler(this.packetsTable_MouseDown);
             // 
             // directionColumn
             // 
@@ -166,6 +169,8 @@
             // 
             // actionsPanel
             // 
+            this.actionsPanel.Controls.Add(this.ignoreFilterListCheckBox);
+            this.actionsPanel.Controls.Add(this.toggleOpCodesButton);
             this.actionsPanel.Controls.Add(this.protocolsList);
             this.actionsPanel.Controls.Add(this.selectProtocolLabel);
             this.actionsPanel.Controls.Add(this.applicationsList);
@@ -176,6 +181,32 @@
             this.actionsPanel.Name = "actionsPanel";
             this.actionsPanel.Size = new System.Drawing.Size(768, 31);
             this.actionsPanel.TabIndex = 3;
+            // 
+            // ignoreFilterListCheckBox
+            // 
+            this.ignoreFilterListCheckBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.ignoreFilterListCheckBox.AutoSize = true;
+            this.ignoreFilterListCheckBox.Location = new System.Drawing.Point(409, 7);
+            this.ignoreFilterListCheckBox.Name = "ignoreFilterListCheckBox";
+            this.ignoreFilterListCheckBox.Size = new System.Drawing.Size(81, 17);
+            this.ignoreFilterListCheckBox.TabIndex = 6;
+            this.ignoreFilterListCheckBox.Text = "Ignore Filter";
+            this.ignoreFilterListCheckBox.UseVisualStyleBackColor = true;
+            this.ignoreFilterListCheckBox.CheckedChanged += new System.EventHandler(this.ignoreFilterListCheckBox_CheckedChanged);
+            // 
+            // toggleOpCodesButton
+            // 
+            this.toggleOpCodesButton.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.toggleOpCodesButton.Enabled = false;
+            this.toggleOpCodesButton.Location = new System.Drawing.Point(495, 4);
+            this.toggleOpCodesButton.Name = "toggleOpCodesButton";
+            this.toggleOpCodesButton.Size = new System.Drawing.Size(95, 23);
+            this.toggleOpCodesButton.TabIndex = 5;
+            this.toggleOpCodesButton.Text = "Toggle OpCodes";
+            this.toggleOpCodesButton.UseVisualStyleBackColor = true;
+            this.toggleOpCodesButton.Click += new System.EventHandler(this.toggleOpCodesButton_Click);
             // 
             // protocolsList
             // 
@@ -254,18 +285,9 @@
             this.eventsTable.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
             this.eventsTable.Size = new System.Drawing.Size(367, 212);
             this.eventsTable.TabIndex = 4;
+            this.eventsTable.CellMouseClick += new System.Windows.Forms.DataGridViewCellMouseEventHandler(this.eventsTable_CellMouseClick);
             this.eventsTable.Scroll += new System.Windows.Forms.ScrollEventHandler(this.eventsTable_Scroll);
             this.eventsTable.SelectionChanged += new System.EventHandler(this.eventsTable_SelectionChanged);
-            // 
-            // tablesPanel
-            // 
-            this.tablesPanel.Controls.Add(this.eventsTable);
-            this.tablesPanel.Controls.Add(this.packetsTable);
-            this.tablesPanel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.tablesPanel.Location = new System.Drawing.Point(0, 31);
-            this.tablesPanel.Name = "tablesPanel";
-            this.tablesPanel.Size = new System.Drawing.Size(768, 253);
-            this.tablesPanel.TabIndex = 5;
             // 
             // eventDrectionColumn
             // 
@@ -309,6 +331,16 @@
             this.eventDataColumn.HeaderText = "Data";
             this.eventDataColumn.Name = "eventDataColumn";
             this.eventDataColumn.ReadOnly = true;
+            // 
+            // tablesPanel
+            // 
+            this.tablesPanel.Controls.Add(this.eventsTable);
+            this.tablesPanel.Controls.Add(this.packetsTable);
+            this.tablesPanel.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.tablesPanel.Location = new System.Drawing.Point(0, 31);
+            this.tablesPanel.Name = "tablesPanel";
+            this.tablesPanel.Size = new System.Drawing.Size(768, 253);
+            this.tablesPanel.TabIndex = 5;
             // 
             // TcpConnectionInfoControl
             // 
@@ -355,5 +387,7 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn eventTypeColumn;
         private System.Windows.Forms.DataGridViewTextBoxColumn eventLengthColumn;
         private System.Windows.Forms.DataGridViewTextBoxColumn eventDataColumn;
+        private System.Windows.Forms.Button toggleOpCodesButton;
+        private System.Windows.Forms.CheckBox ignoreFilterListCheckBox;
     }
 }

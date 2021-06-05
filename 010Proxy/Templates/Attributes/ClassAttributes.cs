@@ -2,8 +2,14 @@
 
 namespace _010Proxy.Templates.Attributes
 {
+    [AttributeUsage(AttributeTargets.Class, Inherited = false)]
+    public sealed class RootAttribute : Attribute
+    {
+        public ushort Priority { get; set; } = 1;
+    }
+
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-    public sealed class EventAttribute : Attribute
+    public class EventAttribute : Attribute
     {
         public object OpCode { get; set; }
 
@@ -17,5 +23,11 @@ namespace _010Proxy.Templates.Attributes
             OpCodeIndex = 1;
             SourceField = sourceField;
         }
+    }
+
+    [AttributeUsage(AttributeTargets.Class)]
+    public class JsonAttribute : Attribute
+    {
+
     }
 }

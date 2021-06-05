@@ -72,6 +72,7 @@
             // 
             // noInterfacesLabel
             // 
+            this.noInterfacesLabel.Anchor = System.Windows.Forms.AnchorStyles.None;
             this.noInterfacesLabel.Location = new System.Drawing.Point(209, 256);
             this.noInterfacesLabel.Name = "noInterfacesLabel";
             this.noInterfacesLabel.Size = new System.Drawing.Size(350, 13);

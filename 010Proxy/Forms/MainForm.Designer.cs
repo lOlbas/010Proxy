@@ -33,6 +33,16 @@ namespace _010Proxy.Forms
             this.components = new System.ComponentModel.Container();
             this.tabControl = new System.Windows.Forms.TabControl();
             this.mainMenu = new System.Windows.Forms.MenuStrip();
+            this.fileMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.openFileMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.openRecentFileMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.noFilesFoundToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.closeFileMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
+            this.saveFileMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.saveAsFileMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
+            this.quitFileMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.captureMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.startCaptureMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.stopCaptureMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -49,10 +59,13 @@ namespace _010Proxy.Forms
             this.flowDataPreviewGroupBox = new System.Windows.Forms.GroupBox();
             this.flowDataView = new System.Windows.Forms.TreeView();
             this.leftPanelSplitter = new System.Windows.Forms.Splitter();
+            this.statusStrip = new System.Windows.Forms.StatusStrip();
+            this.statusLabel = new System.Windows.Forms.ToolStripStatusLabel();
             this.mainMenu.SuspendLayout();
             this.configGroupBox.SuspendLayout();
             this.leftPanel.SuspendLayout();
             this.flowDataPreviewGroupBox.SuspendLayout();
+            this.statusStrip.SuspendLayout();
             this.SuspendLayout();
             // 
             // tabControl
@@ -61,7 +74,7 @@ namespace _010Proxy.Forms
             this.tabControl.Location = new System.Drawing.Point(350, 24);
             this.tabControl.Name = "tabControl";
             this.tabControl.SelectedIndex = 0;
-            this.tabControl.Size = new System.Drawing.Size(1146, 961);
+            this.tabControl.Size = new System.Drawing.Size(1146, 939);
             this.tabControl.TabIndex = 0;
             this.tabControl.SelectedIndexChanged += new System.EventHandler(this.tabControl_SelectedIndexChanged);
             this.tabControl.Deselecting += new System.Windows.Forms.TabControlCancelEventHandler(this.tabControl_Deselecting);
@@ -70,6 +83,7 @@ namespace _010Proxy.Forms
             // mainMenu
             // 
             this.mainMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.fileMenuItem,
             this.captureMenuItem,
             this.protocolMenuItem});
             this.mainMenu.Location = new System.Drawing.Point(0, 0);
@@ -77,6 +91,83 @@ namespace _010Proxy.Forms
             this.mainMenu.Size = new System.Drawing.Size(1496, 24);
             this.mainMenu.TabIndex = 1;
             this.mainMenu.Text = "menuStrip1";
+            // 
+            // fileMenuItem
+            // 
+            this.fileMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.openFileMenuItem,
+            this.openRecentFileMenuItem,
+            this.closeFileMenuItem,
+            this.toolStripSeparator1,
+            this.saveFileMenuItem,
+            this.saveAsFileMenuItem,
+            this.toolStripSeparator2,
+            this.quitFileMenuItem});
+            this.fileMenuItem.Name = "fileMenuItem";
+            this.fileMenuItem.Size = new System.Drawing.Size(37, 20);
+            this.fileMenuItem.Text = "File";
+            // 
+            // openFileMenuItem
+            // 
+            this.openFileMenuItem.Name = "openFileMenuItem";
+            this.openFileMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.O)));
+            this.openFileMenuItem.Size = new System.Drawing.Size(146, 22);
+            this.openFileMenuItem.Text = "Open";
+            this.openFileMenuItem.Click += new System.EventHandler(this.openFileMenuItem_Click);
+            // 
+            // openRecentFileMenuItem
+            // 
+            this.openRecentFileMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.noFilesFoundToolStripMenuItem});
+            this.openRecentFileMenuItem.Name = "openRecentFileMenuItem";
+            this.openRecentFileMenuItem.Size = new System.Drawing.Size(146, 22);
+            this.openRecentFileMenuItem.Text = "Open Recent";
+            // 
+            // noFilesFoundToolStripMenuItem
+            // 
+            this.noFilesFoundToolStripMenuItem.Enabled = false;
+            this.noFilesFoundToolStripMenuItem.Name = "noFilesFoundToolStripMenuItem";
+            this.noFilesFoundToolStripMenuItem.Size = new System.Drawing.Size(149, 22);
+            this.noFilesFoundToolStripMenuItem.Text = "No files found";
+            // 
+            // closeFileMenuItem
+            // 
+            this.closeFileMenuItem.Enabled = false;
+            this.closeFileMenuItem.Name = "closeFileMenuItem";
+            this.closeFileMenuItem.Size = new System.Drawing.Size(146, 22);
+            this.closeFileMenuItem.Text = "Close";
+            // 
+            // toolStripSeparator1
+            // 
+            this.toolStripSeparator1.Name = "toolStripSeparator1";
+            this.toolStripSeparator1.Size = new System.Drawing.Size(143, 6);
+            // 
+            // saveFileMenuItem
+            // 
+            this.saveFileMenuItem.Enabled = false;
+            this.saveFileMenuItem.Name = "saveFileMenuItem";
+            this.saveFileMenuItem.Size = new System.Drawing.Size(146, 22);
+            this.saveFileMenuItem.Text = "Save";
+            // 
+            // saveAsFileMenuItem
+            // 
+            this.saveAsFileMenuItem.Enabled = false;
+            this.saveAsFileMenuItem.Name = "saveAsFileMenuItem";
+            this.saveAsFileMenuItem.Size = new System.Drawing.Size(146, 22);
+            this.saveAsFileMenuItem.Text = "Save As...";
+            // 
+            // toolStripSeparator2
+            // 
+            this.toolStripSeparator2.Name = "toolStripSeparator2";
+            this.toolStripSeparator2.Size = new System.Drawing.Size(143, 6);
+            // 
+            // quitFileMenuItem
+            // 
+            this.quitFileMenuItem.Name = "quitFileMenuItem";
+            this.quitFileMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Q)));
+            this.quitFileMenuItem.Size = new System.Drawing.Size(146, 22);
+            this.quitFileMenuItem.Text = "Quit";
+            this.quitFileMenuItem.Click += new System.EventHandler(this.quitFileMenuItem_Click);
             // 
             // captureMenuItem
             // 
@@ -149,7 +240,7 @@ namespace _010Proxy.Forms
             // 
             this.splitter.Location = new System.Drawing.Point(350, 24);
             this.splitter.Name = "splitter";
-            this.splitter.Size = new System.Drawing.Size(3, 961);
+            this.splitter.Size = new System.Drawing.Size(3, 939);
             this.splitter.TabIndex = 3;
             this.splitter.TabStop = false;
             // 
@@ -197,7 +288,7 @@ namespace _010Proxy.Forms
             this.leftPanel.Dock = System.Windows.Forms.DockStyle.Left;
             this.leftPanel.Location = new System.Drawing.Point(0, 24);
             this.leftPanel.Name = "leftPanel";
-            this.leftPanel.Size = new System.Drawing.Size(350, 961);
+            this.leftPanel.Size = new System.Drawing.Size(350, 939);
             this.leftPanel.TabIndex = 4;
             // 
             // flowDataPreviewGroupBox
@@ -206,7 +297,7 @@ namespace _010Proxy.Forms
             this.flowDataPreviewGroupBox.Dock = System.Windows.Forms.DockStyle.Fill;
             this.flowDataPreviewGroupBox.Location = new System.Drawing.Point(0, 603);
             this.flowDataPreviewGroupBox.Name = "flowDataPreviewGroupBox";
-            this.flowDataPreviewGroupBox.Size = new System.Drawing.Size(350, 358);
+            this.flowDataPreviewGroupBox.Size = new System.Drawing.Size(350, 336);
             this.flowDataPreviewGroupBox.TabIndex = 6;
             this.flowDataPreviewGroupBox.TabStop = false;
             this.flowDataPreviewGroupBox.Text = "Flow Data Preview";
@@ -218,7 +309,7 @@ namespace _010Proxy.Forms
             this.flowDataView.ItemHeight = 20;
             this.flowDataView.Location = new System.Drawing.Point(3, 16);
             this.flowDataView.Name = "flowDataView";
-            this.flowDataView.Size = new System.Drawing.Size(344, 339);
+            this.flowDataView.Size = new System.Drawing.Size(344, 317);
             this.flowDataView.TabIndex = 0;
             this.flowDataView.NodeMouseClick += new System.Windows.Forms.TreeNodeMouseClickEventHandler(this.flowDataView_NodeMouseClick);
             // 
@@ -231,6 +322,21 @@ namespace _010Proxy.Forms
             this.leftPanelSplitter.TabIndex = 5;
             this.leftPanelSplitter.TabStop = false;
             // 
+            // statusStrip
+            // 
+            this.statusStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.statusLabel});
+            this.statusStrip.Location = new System.Drawing.Point(0, 963);
+            this.statusStrip.Name = "statusStrip";
+            this.statusStrip.Size = new System.Drawing.Size(1496, 22);
+            this.statusStrip.TabIndex = 5;
+            this.statusStrip.Text = "Whaaaat";
+            // 
+            // statusLabel
+            // 
+            this.statusLabel.Name = "statusLabel";
+            this.statusLabel.Size = new System.Drawing.Size(0, 17);
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -240,6 +346,7 @@ namespace _010Proxy.Forms
             this.Controls.Add(this.tabControl);
             this.Controls.Add(this.leftPanel);
             this.Controls.Add(this.mainMenu);
+            this.Controls.Add(this.statusStrip);
             this.KeyPreview = true;
             this.MainMenuStrip = this.mainMenu;
             this.Name = "MainForm";
@@ -252,6 +359,8 @@ namespace _010Proxy.Forms
             this.configGroupBox.ResumeLayout(false);
             this.leftPanel.ResumeLayout(false);
             this.flowDataPreviewGroupBox.ResumeLayout(false);
+            this.statusStrip.ResumeLayout(false);
+            this.statusStrip.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -277,6 +386,18 @@ namespace _010Proxy.Forms
         private System.Windows.Forms.Splitter leftPanelSplitter;
         private System.Windows.Forms.GroupBox flowDataPreviewGroupBox;
         private System.Windows.Forms.TreeView flowDataView;
+        private System.Windows.Forms.ToolStripMenuItem fileMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem openFileMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem openRecentFileMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem noFilesFoundToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem closeFileMenuItem;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
+        private System.Windows.Forms.ToolStripMenuItem saveFileMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem saveAsFileMenuItem;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator2;
+        private System.Windows.Forms.ToolStripMenuItem quitFileMenuItem;
+        private System.Windows.Forms.StatusStrip statusStrip;
+        private System.Windows.Forms.ToolStripStatusLabel statusLabel;
     }
 }
 

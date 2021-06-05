@@ -20,10 +20,15 @@ namespace _010Proxy.Views
             {
                 foreach (var device in ParentForm.Sniffer.Devices)
                 {
-                    availableDevicesListView.Items.Add(new ListViewItem(device.GetFriendlyName())
+                    var friendlyName = device.GetFriendlyName();
+
+                    if (friendlyName != null)
                     {
-                        Tag = device
-                    });
+                        availableDevicesListView.Items.Add(new ListViewItem(friendlyName)
+                        {
+                            Tag = device
+                        });
+                    }
                 }
 
                 availableDevicesListView.Visible = true;
